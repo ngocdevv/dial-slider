@@ -48,22 +48,13 @@ const Tick = React.memo(function Tick({
     screenCenter: number;
 }) {
     const tickX = tickValue * TICK_SPACING;
-    const SPREAD = screenCenter * 0.85;
 
     const animStyle = useAnimatedStyle(() => {
         const x = tickX + translationX.value;
         const dist = Math.abs(x);
-
-        const t = Math.min(dist / SPREAD, 1);
-
-        const baseMax = isMajor ? MAJOR_TICK_HEIGHT : MINOR_TICK_HEIGHT;
-        const baseMin = MINOR_TICK_HEIGHT * 0.6;
-        const height = baseMax - (baseMax - baseMin) * t;
-
         const opacity = Math.max(0, 1 - dist / (screenCenter * 0.95));
 
         return {
-            height,
             opacity,
             transform: [{ translateX: x }],
         };
@@ -113,12 +104,11 @@ export function DialRuler({
     const { width: screenWidth } = useWindowDimensions();
     const screenCenter = screenWidth / 2;
 
-    // Generate ticks for all values in range (negative + positive)
+    // 20 ticks per side (step = 5), major = multiples of 10 (white)
     const ticks = useMemo(() => {
         const result: { val: number; isMajor: boolean }[] = [];
-        for (let val = minValue; val <= maxValue; val++) {
-            if (val === 0) continue; // origin dot marks value 0
-            result.push({ val, isMajor: val % 5 === 0 });
+        for (let val = minValue; val <= maxValue; val += 5) {
+            result.push({ val, isMajor: val % 10 === 0 });
         }
         return result;
     }, [minValue, maxValue]);
@@ -246,6 +236,7 @@ const styles = StyleSheet.create({
     tick: {
         position: 'absolute',
         bottom: 0,
+        height: MINOR_TICK_HEIGHT,
         borderRadius: 1,
     },
     originDot: {
