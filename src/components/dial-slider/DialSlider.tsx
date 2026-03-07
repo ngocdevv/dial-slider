@@ -1,5 +1,4 @@
-import * as Haptics from 'expo-haptics';
-import React, { useCallback } from 'react';
+import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import {
@@ -31,10 +30,6 @@ export function DialSlider({
 }: DialSliderProps) {
     const value = useSharedValue(initialValue);
 
-    const handleHapticTick = useCallback(() => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }, []);
-
     useAnimatedReaction(
         () => Math.round(value.value),
         (current, previous) => {
@@ -53,7 +48,6 @@ export function DialSlider({
                     value={value}
                     minValue={minValue}
                     maxValue={maxValue}
-                    onHapticTick={handleHapticTick}
                 />
             </View>
         </GestureHandlerRootView>

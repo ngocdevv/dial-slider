@@ -1,10 +1,9 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useCallback, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
     cancelAnimation,
-    runOnJS,
     useAnimatedReaction,
     useAnimatedStyle,
     useSharedValue,
@@ -12,7 +11,7 @@ import Animated, {
     withDelay,
     withSequence,
     withTiming,
-    type SharedValue,
+    type SharedValue
 } from 'react-native-reanimated';
 
 import { COLORS, DIAL_CONFIG } from './constants';
@@ -21,8 +20,7 @@ const {
     TICK_SPACING,
     TICK_HEIGHT,
     CENTER_TICK_HEIGHT,
-    TICK_WIDTH,
-    CENTER_TICK_WIDTH,
+    TICK_WIDTH
 } = DIAL_CONFIG;
 
 // ─── Types ────────────────────────────────────────────────────────────
@@ -31,7 +29,6 @@ interface DialRulerProps {
     value: SharedValue<number>;
     minValue: number;
     maxValue: number;
-    onHapticTick?: () => void;
 }
 
 // ─── Tick (bottom-aligned, directional wave) ─────────────────────────
@@ -44,7 +41,6 @@ const Tick = React.memo(function Tick({
     translationX,
     dragStartX,
     isDragging,
-    dragVelocity,
     screenCenter,
 }: {
     tickValue: number;
@@ -52,7 +48,6 @@ const Tick = React.memo(function Tick({
     translationX: SharedValue<number>;
     dragStartX: SharedValue<number>;
     isDragging: SharedValue<number>;
-    dragVelocity: SharedValue<number>;
     screenCenter: number;
 }) {
     const tickX = tickValue * TICK_SPACING;
@@ -183,8 +178,7 @@ function OriginDot({
 export function DialRuler({
     value,
     minValue,
-    maxValue,
-    onHapticTick,
+    maxValue
 }: DialRulerProps) {
     const { width: screenWidth } = useWindowDimensions();
     const screenCenter = screenWidth / 2;
@@ -207,9 +201,6 @@ export function DialRuler({
     const minTranslation = -maxValue * TICK_SPACING;
     const maxTranslation = -minValue * TICK_SPACING;
 
-    const triggerHaptic = useCallback(() => {
-        onHapticTick?.();
-    }, [onHapticTick]);
 
     const gesture = Gesture.Pan()
         .onBegin(() => {
@@ -254,9 +245,6 @@ export function DialRuler({
         (current, previous) => {
             if (current !== previous) {
                 value.value = current;
-                if (onHapticTick) {
-                    runOnJS(triggerHaptic)();
-                }
             }
         }
     );
@@ -278,7 +266,6 @@ export function DialRuler({
                                 translationX={translationX}
                                 dragStartX={startX}
                                 isDragging={isDragging}
-                                dragVelocity={dragVelocity}
                                 screenCenter={screenCenter}
                             />
                         ))}
