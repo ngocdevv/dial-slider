@@ -16,8 +16,7 @@ import { COLORS, DIAL_CONFIG } from './constants';
 
 const {
     TICK_SPACING,
-    MINOR_TICK_HEIGHT,
-    MAJOR_TICK_HEIGHT,
+    TICK_HEIGHT,
     CENTER_TICK_HEIGHT,
     TICK_WIDTH,
     CENTER_TICK_WIDTH,
@@ -236,7 +235,7 @@ const styles = StyleSheet.create({
     tick: {
         position: 'absolute',
         bottom: 0,
-        height: MINOR_TICK_HEIGHT,
+        height: TICK_HEIGHT,
         borderRadius: 1,
     },
     originDot: {

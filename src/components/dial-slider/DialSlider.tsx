@@ -8,14 +8,18 @@ import {
     useSharedValue,
 } from 'react-native-reanimated';
 
-import { COLORS, DIAL_CONFIG } from './constants';
+import { DIAL_CONFIG } from './constants';
 import { DialRuler } from './DialRuler';
 import { ValueDisplay } from './ValueDisplay';
 
 interface DialSliderProps {
+    /** Minimum value (default: -100) */
     minValue?: number;
+    /** Maximum value (default: 100) */
     maxValue?: number;
+    /** Starting value (default: 0) */
     initialValue?: number;
+    /** Called on each value change */
     onValueChange?: (value: number) => void;
 }
 
@@ -31,7 +35,6 @@ export function DialSlider({
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }, []);
 
-    // Notify parent of value changes
     useAnimatedReaction(
         () => Math.round(value.value),
         (current, previous) => {
@@ -59,15 +62,13 @@ export function DialSlider({
 
 const styles = StyleSheet.create({
     gestureRoot: {
-        flex: 1,
+        alignSelf: 'stretch',
     },
     container: {
-        flex: 1,
-        backgroundColor: COLORS.BACKGROUND,
         alignItems: 'center',
-        justifyContent: 'center',
+        paddingVertical: 8,
     },
     spacer: {
-        height: 32,
+        height: DIAL_CONFIG.GAP_RING_RULER,
     },
 });
