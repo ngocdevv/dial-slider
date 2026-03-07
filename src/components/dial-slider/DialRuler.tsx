@@ -58,6 +58,7 @@ const Tick = React.memo(function Tick({
     const tickX = tickValue * TICK_SPACING;
     const TICK_STEP = 5;
     const heightAnim = useSharedValue(TICK_HEIGHT as number);
+    const colorAnim = useSharedValue(0); // 0=MINOR, 1=MAJOR
 
     // Smooth height transition when nearest tick changes
     useAnimatedReaction(
@@ -76,6 +77,24 @@ const Tick = React.memo(function Tick({
         }
     );
 
+    // Smooth color fade when entering/leaving wave zone
+    useAnimatedReaction(
+        () => {
+            const startVal = -dragStartX.value / TICK_SPACING;
+            const currentVal = -translationX.value / TICK_SPACING;
+            const lo = Math.min(startVal, currentVal);
+            const hi = Math.max(startVal, currentVal);
+            const rangeSize = hi - lo;
+            const inRange = tickValue >= lo && tickValue <= hi && rangeSize > 0;
+            return inRange && isDragging.value > 0.5;
+        },
+        (inWave, wasInWave) => {
+            if (inWave !== wasInWave) {
+                colorAnim.value = withTiming(inWave ? 1 : 0, { duration: 200 });
+            }
+        }
+    );
+
     const animStyle = useAnimatedStyle(() => {
         const x = tickX + translationX.value;
         const dist = Math.abs(x);
@@ -88,13 +107,11 @@ const Tick = React.memo(function Tick({
         const hi = Math.max(startVal, currentVal);
         const rangeSize = hi - lo;
 
-        // Check if this tick falls within the drag range
         const inRange = tickValue >= lo && tickValue <= hi && rangeSize > 0;
 
         // Cosine wave: tallest near current, drops off sharply toward start
         const distFromCurrent = Math.abs(currentVal - tickValue);
         const rawDist = rangeSize > 0 ? Math.min(distFromCurrent / rangeSize, 1) : 1;
-        // sqrt makes distant ticks drop faster
         const normalizedDist = Math.sqrt(rawDist);
         const waveFactor = inRange
             ? ((Math.cos(normalizedDist * Math.PI) + 1) / 2) * isDragging.value
@@ -104,18 +121,23 @@ const Tick = React.memo(function Tick({
         // Use animated height (smooth transition), but allow wave to override if taller
         const height = Math.max(heightAnim.value, waveHeight);
 
-        // Color: yellow for nearest tick
+        // Color: yellow for nearest, smooth fade for wave
         const nearestTickVal = Math.round(currentVal / TICK_STEP) * TICK_STEP;
         const isNearest = tickValue === nearestTickVal;
+
+        // Blend MINOR→MAJOR using animated colorAnim
+        const r1 = 0x3D, g1 = 0x3D, b1 = 0x3D; // MINOR_TICK #3D3D3D
+        const r2 = 0xCC, g2 = 0xCC, b2 = 0xCC; // MAJOR_TICK #CCCCCC
+        const t = isMajor ? 1 : colorAnim.value;
+        const r = Math.round(r1 + (r2 - r1) * t);
+        const g = Math.round(g1 + (g2 - g1) * t);
+        const b = Math.round(b1 + (b2 - b1) * t);
+        const blendedColor = `rgb(${r},${g},${b})`;
 
         return {
             height,
             opacity,
-            backgroundColor: isNearest
-                ? COLORS.POSITIVE
-                : isMajor
-                    ? COLORS.MAJOR_TICK
-                    : COLORS.MINOR_TICK,
+            backgroundColor: isNearest ? COLORS.POSITIVE : blendedColor,
             transform: [{ translateX: x }],
         };
     });
@@ -238,6 +260,9 @@ export function DialRuler({
         <View style={styles.container}>
             <GestureDetector gesture={gesture}>
                 <Animated.View style={styles.rulerArea}>
+                    {/* Origin dot — always at value 0 */}
+                    <OriginDot translationX={translationX} />
+
                     {/* Tick marks — only for values > 0, bottom-aligned */}
                     <View style={styles.ticksContainer}>
                         {ticks.map((tick) => (
@@ -253,9 +278,6 @@ export function DialRuler({
                             />
                         ))}
                     </View>
-
-                    {/* Origin dot — always at value 0 */}
-                    <OriginDot translationX={translationX} />
 
                     {/* No separate center indicator — the tick at current value acts as it */}
                 </Animated.View>
@@ -316,7 +338,7 @@ const styles = StyleSheet.create({
         height: 6,
         borderRadius: 3,
         backgroundColor: COLORS.ORIGIN_DOT,
-        bottom: CENTER_TICK_HEIGHT + 6,
+        bottom: TICK_HEIGHT + 6,
     },
     leftMask: {
         position: 'absolute',
