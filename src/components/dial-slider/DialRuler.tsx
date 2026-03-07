@@ -192,7 +192,7 @@ export function DialRuler({
         return result;
     }, [minValue, maxValue]);
 
-    const translationX = useSharedValue(-value.value * TICK_SPACING);
+    const translationX = useSharedValue(0);
     const startX = useSharedValue(0);
     const isDragging = useSharedValue(0);
     const dragVelocity = useSharedValue(0);

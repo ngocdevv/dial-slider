@@ -18,7 +18,7 @@ interface ValueDisplayProps {
 }
 
 export function ValueDisplay({ value }: ValueDisplayProps) {
-    const [displayText, setDisplayText] = useState(`${Math.round(value.value)}`);
+    const [displayText, setDisplayText] = useState('0');
 
     useAnimatedReaction(
         () => Math.round(value.value),
