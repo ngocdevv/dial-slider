@@ -77,20 +77,22 @@ const Tick = React.memo(function Tick({
         }
     );
 
-    // Smooth color fade when entering/leaving wave zone
+    // Sequential color pulse: each tick lights up as value crosses it
     useAnimatedReaction(
-        () => {
-            const startVal = -dragStartX.value / TICK_SPACING;
-            const currentVal = -translationX.value / TICK_SPACING;
-            const lo = Math.min(startVal, currentVal);
-            const hi = Math.max(startVal, currentVal);
-            const rangeSize = hi - lo;
-            const inRange = tickValue >= lo && tickValue <= hi && rangeSize > 0;
-            return inRange && isDragging.value > 0.5;
-        },
-        (inWave, wasInWave) => {
-            if (inWave !== wasInWave) {
-                colorAnim.value = withTiming(inWave ? 1 : 0, { duration: 200 });
+        () => Math.round(-translationX.value / TICK_SPACING),
+        (currentVal, prevVal) => {
+            if (prevVal === null) return;
+            // Did the value just cross this tick?
+            const crossed =
+                (prevVal < tickValue && currentVal >= tickValue) ||
+                (prevVal > tickValue && currentVal <= tickValue);
+            if (crossed) {
+                // Pulse: bright → fade back
+                cancelAnimation(colorAnim);
+                colorAnim.value = withSequence(
+                    withTiming(1, { duration: 0 }),
+                    withTiming(0, { duration: 300 })
+                );
             }
         }
     );
@@ -163,7 +165,10 @@ function OriginDot({
     // Value 0 → position 0 * TICK_SPACING = 0
     const animStyle = useAnimatedStyle(() => {
         const x = translationX.value; // 0 + translationX
-        const opacity = Math.max(0, 1 - Math.abs(x) / 160);
+        // Hide when value is at 0 (origin dot overlaps current tick)
+        const isAtZero = Math.abs(x) < 2;
+        const fadeOpacity = Math.max(0, 1 - Math.abs(x) / 160);
+        const opacity = isAtZero ? 0 : fadeOpacity;
         return {
             opacity,
             transform: [{ translateX: x }],
