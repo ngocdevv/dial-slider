@@ -43,7 +43,6 @@ export function DialSlider({
         <GestureHandlerRootView style={styles.gestureRoot}>
             <View style={styles.container}>
                 <ValueDisplay value={value} />
-                <View style={styles.spacer} />
                 <DialRuler
                     value={value}
                     minValue={minValue}
@@ -61,8 +60,5 @@ const styles = StyleSheet.create({
     container: {
         alignItems: 'center',
         paddingVertical: 8,
-    },
-    spacer: {
-        height: DIAL_CONFIG.GAP_RING_RULER,
     },
 });
