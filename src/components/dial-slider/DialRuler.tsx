@@ -42,6 +42,7 @@ const Tick = React.memo(function Tick({
     tickValue,
     isMajor,
     translationX,
+    dragStartX,
     isDragging,
     dragVelocity,
     screenCenter,
@@ -49,6 +50,7 @@ const Tick = React.memo(function Tick({
     tickValue: number;
     isMajor: boolean;
     translationX: SharedValue<number>;
+    dragStartX: SharedValue<number>;
     isDragging: SharedValue<number>;
     dragVelocity: SharedValue<number>;
     screenCenter: number;
@@ -79,25 +81,31 @@ const Tick = React.memo(function Tick({
         const dist = Math.abs(x);
         const opacity = Math.max(0, 1 - dist / (screenCenter * 0.95));
 
-        const vel = dragVelocity.value;
+        // Wave: spans from drag start position to current position
+        const startVal = -dragStartX.value / TICK_SPACING;
+        const currentVal = -translationX.value / TICK_SPACING;
+        const lo = Math.min(startVal, currentVal);
+        const hi = Math.max(startVal, currentVal);
+        const rangeSize = hi - lo;
 
-        // One-sided wave: only ticks ahead of the sweep direction
-        const onSweepSide = (vel > 0 && x >= 0) || (vel < 0 && x <= 0);
+        // Check if this tick falls within the drag range
+        const inRange = tickValue >= lo && tickValue <= hi && rangeSize > 0;
 
-        // Velocity-dependent radius
-        const absVel = Math.min(Math.abs(vel), 2000);
-        const WAVE_RADIUS = 4 + 36 * (absVel / 2000);
-
-        const wave = onSweepSide ? Math.max(0, 1 - dist / WAVE_RADIUS) : 0;
-        const waveFactor = wave * wave * isDragging.value;
+        // Cosine wave: tallest near current, drops off sharply toward start
+        const distFromCurrent = Math.abs(currentVal - tickValue);
+        const rawDist = rangeSize > 0 ? Math.min(distFromCurrent / rangeSize, 1) : 1;
+        // sqrt makes distant ticks drop faster
+        const normalizedDist = Math.sqrt(rawDist);
+        const waveFactor = inRange
+            ? ((Math.cos(normalizedDist * Math.PI) + 1) / 2) * isDragging.value
+            : 0;
         const waveHeight = TICK_HEIGHT + (CENTER_TICK_HEIGHT - TICK_HEIGHT) * waveFactor;
 
         // Use animated height (smooth transition), but allow wave to override if taller
         const height = Math.max(heightAnim.value, waveHeight);
 
         // Color: yellow for nearest tick
-        const currentValue = -translationX.value / TICK_SPACING;
-        const nearestTickVal = Math.round(currentValue / TICK_STEP) * TICK_STEP;
+        const nearestTickVal = Math.round(currentVal / TICK_STEP) * TICK_STEP;
         const isNearest = tickValue === nearestTickVal;
 
         return {
@@ -238,6 +246,7 @@ export function DialRuler({
                                 tickValue={tick.val}
                                 isMajor={tick.isMajor}
                                 translationX={translationX}
+                                dragStartX={startX}
                                 isDragging={isDragging}
                                 dragVelocity={dragVelocity}
                                 screenCenter={screenCenter}
