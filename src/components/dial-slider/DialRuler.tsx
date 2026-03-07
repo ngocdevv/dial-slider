@@ -3,11 +3,14 @@ import React, { useCallback, useMemo } from 'react';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
+    cancelAnimation,
     runOnJS,
     useAnimatedReaction,
     useAnimatedStyle,
     useSharedValue,
     withDecay,
+    withDelay,
+    withSequence,
     withTiming,
     type SharedValue,
 } from 'react-native-reanimated';
@@ -31,41 +34,89 @@ interface DialRulerProps {
     onHapticTick?: () => void;
 }
 
-// ─── Tick (bottom-aligned, dynamic height) ────────────────────────────
-// Position formula: tickValue * TICK_SPACING + translationX
-// This gives (tickValue - currentValue) * TICK_SPACING → 0 when at center.
+// ─── Tick (bottom-aligned, directional wave) ─────────────────────────
+// Wave is one-sided: only ticks ahead of the sweep direction are affected.
+// WAVE_RADIUS scales with drag velocity: faster = wider ripple.
 
 const Tick = React.memo(function Tick({
     tickValue,
     isMajor,
     translationX,
+    isDragging,
+    dragVelocity,
     screenCenter,
 }: {
     tickValue: number;
     isMajor: boolean;
     translationX: SharedValue<number>;
+    isDragging: SharedValue<number>;
+    dragVelocity: SharedValue<number>;
     screenCenter: number;
 }) {
     const tickX = tickValue * TICK_SPACING;
+    const TICK_STEP = 5;
+    const heightAnim = useSharedValue(TICK_HEIGHT as number);
+
+    // Smooth height transition when nearest tick changes
+    useAnimatedReaction(
+        () => {
+            const currentValue = -translationX.value / TICK_SPACING;
+            const nearestTickVal = Math.round(currentValue / TICK_STEP) * TICK_STEP;
+            return tickValue === nearestTickVal;
+        },
+        (isNearest, wasNearest) => {
+            if (isNearest !== wasNearest) {
+                heightAnim.value = withTiming(
+                    isNearest ? CENTER_TICK_HEIGHT : TICK_HEIGHT,
+                    { duration: 150 }
+                );
+            }
+        }
+    );
 
     const animStyle = useAnimatedStyle(() => {
         const x = tickX + translationX.value;
         const dist = Math.abs(x);
         const opacity = Math.max(0, 1 - dist / (screenCenter * 0.95));
 
+        const vel = dragVelocity.value;
+
+        // One-sided wave: only ticks ahead of the sweep direction
+        const onSweepSide = (vel > 0 && x >= 0) || (vel < 0 && x <= 0);
+
+        // Velocity-dependent radius
+        const absVel = Math.min(Math.abs(vel), 2000);
+        const WAVE_RADIUS = 4 + 36 * (absVel / 2000);
+
+        const wave = onSweepSide ? Math.max(0, 1 - dist / WAVE_RADIUS) : 0;
+        const waveFactor = wave * wave * isDragging.value;
+        const waveHeight = TICK_HEIGHT + (CENTER_TICK_HEIGHT - TICK_HEIGHT) * waveFactor;
+
+        // Use animated height (smooth transition), but allow wave to override if taller
+        const height = Math.max(heightAnim.value, waveHeight);
+
+        // Color: yellow for nearest tick
+        const currentValue = -translationX.value / TICK_SPACING;
+        const nearestTickVal = Math.round(currentValue / TICK_STEP) * TICK_STEP;
+        const isNearest = tickValue === nearestTickVal;
+
         return {
+            height,
             opacity,
+            backgroundColor: isNearest
+                ? COLORS.POSITIVE
+                : isMajor
+                    ? COLORS.MAJOR_TICK
+                    : COLORS.MINOR_TICK,
             transform: [{ translateX: x }],
         };
     });
-
-    const color = isMajor ? COLORS.MAJOR_TICK : COLORS.MINOR_TICK;
 
     return (
         <Animated.View
             style={[
                 styles.tick,
-                { width: TICK_WIDTH, backgroundColor: color },
+                { width: TICK_WIDTH },
                 animStyle,
             ]}
         />
@@ -114,6 +165,8 @@ export function DialRuler({
 
     const translationX = useSharedValue(-value.value * TICK_SPACING);
     const startX = useSharedValue(0);
+    const isDragging = useSharedValue(0);
+    const dragVelocity = useSharedValue(0);
 
     // Clamp: value range [minValue, maxValue] → translationX range
     const minTranslation = -maxValue * TICK_SPACING;
@@ -133,8 +186,17 @@ export function DialRuler({
                 minTranslation,
                 Math.min(maxTranslation, newX)
             );
+            // Track velocity for directional wave
+            dragVelocity.value = e.velocityX;
+            // Wave: active while moving, auto-fade after 100ms idle
+            cancelAnimation(isDragging);
+            isDragging.value = withSequence(
+                withTiming(1, { duration: 0 }),
+                withDelay(100, withTiming(0, { duration: 200 }))
+            );
         })
         .onEnd((e) => {
+            isDragging.value = withTiming(0, { duration: 200 });
             translationX.value = withDecay(
                 {
                     velocity: e.velocityX,
@@ -176,6 +238,8 @@ export function DialRuler({
                                 tickValue={tick.val}
                                 isMajor={tick.isMajor}
                                 translationX={translationX}
+                                isDragging={isDragging}
+                                dragVelocity={dragVelocity}
                                 screenCenter={screenCenter}
                             />
                         ))}
@@ -184,8 +248,7 @@ export function DialRuler({
                     {/* Origin dot — always at value 0 */}
                     <OriginDot translationX={translationX} />
 
-                    {/* Center indicator — fixed yellow line */}
-                    <View style={styles.centerIndicator} />
+                    {/* No separate center indicator — the tick at current value acts as it */}
                 </Animated.View>
             </GestureDetector>
 
@@ -245,14 +308,6 @@ const styles = StyleSheet.create({
         borderRadius: 3,
         backgroundColor: COLORS.ORIGIN_DOT,
         bottom: CENTER_TICK_HEIGHT + 6,
-    },
-    centerIndicator: {
-        position: 'absolute',
-        bottom: 0,
-        width: CENTER_TICK_WIDTH,
-        height: CENTER_TICK_HEIGHT,
-        backgroundColor: COLORS.POSITIVE,
-        borderRadius: 1.5,
     },
     leftMask: {
         position: 'absolute',

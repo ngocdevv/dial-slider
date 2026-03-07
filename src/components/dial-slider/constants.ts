@@ -1,8 +1,8 @@
 export const DIAL_CONFIG = {
     // ─── Tick spacing & dimensions ─────────────────
     // Apple iOS dial uses ~8dp between ticks with 20 ticks per side
-    TICK_SPACING: 2,
-    TICK_HEIGHT: 16,
+    TICK_SPACING: 1.5,
+    TICK_HEIGHT: 14,
     TICK_WIDTH: 2,
 
     // Center indicator
