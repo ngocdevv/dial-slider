@@ -107,7 +107,7 @@ export function DialRuler({
     const ticks = useMemo(() => {
         const result: { val: number; isMajor: boolean }[] = [];
         for (let val = minValue; val <= maxValue; val += 5) {
-            result.push({ val, isMajor: val % 10 === 0 });
+            result.push({ val, isMajor: val % 50 === 0 });
         }
         return result;
     }, [minValue, maxValue]);
@@ -236,7 +236,7 @@ const styles = StyleSheet.create({
         position: 'absolute',
         bottom: 0,
         height: TICK_HEIGHT,
-        borderRadius: 1,
+        borderRadius: 1
     },
     originDot: {
         position: 'absolute',

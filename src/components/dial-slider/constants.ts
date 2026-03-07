@@ -3,7 +3,7 @@ export const DIAL_CONFIG = {
     // Apple iOS dial uses ~8dp between ticks with 20 ticks per side
     TICK_SPACING: 2,
     TICK_HEIGHT: 16,
-    TICK_WIDTH: 1.5,
+    TICK_WIDTH: 2,
 
     // Center indicator
     CENTER_TICK_HEIGHT: 28,
@@ -20,7 +20,7 @@ export const DIAL_CONFIG = {
     RING_BG_STROKE_WIDTH: 1.5,
 
     // ─── Value display ─────────────────────────────
-    VALUE_FONT_SIZE: 20,
+    VALUE_FONT_SIZE: 14,
 
     // ─── Spacing ───────────────────────────────────
     GAP_RING_RULER: 8,
@@ -29,8 +29,8 @@ export const DIAL_CONFIG = {
 export const COLORS = {
     POSITIVE: '#FFD700',
     NEGATIVE: '#FFFFFF',
-    MINOR_TICK: '#555555',
-    MAJOR_TICK: '#AAAAAA',
+    MINOR_TICK: '#3D3D3D',
+    MAJOR_TICK: '#CCCCCC',
     RING_BG: '#444444',
     BACKGROUND: '#000000',
     ORIGIN_DOT: '#666666',
