@@ -46,6 +46,11 @@ const {
     RING_STROKE_WIDTH,
     RING_BG_STROKE_WIDTH,
     VALUE_BADGE_DELAY_MS,
+    PRESET_DIM_OPACITY,
+    PRESET_DIM_OUT_MS,
+    PRESET_DIM_IN_MS,
+    VALUE_BADGE_IN_MS,
+    VALUE_BADGE_OUT_MS,
 } = DIAL_CONFIG;
 const RING_CENTER = ITEM_SIZE / 2;
 const RING_RADIUS = RING_CENTER - RING_STROKE_WIDTH / 2;
@@ -392,19 +397,19 @@ export function DialSlider({
             hideBadgeTimerRef.current = null;
         }
         setIsInteracting(true);
-        // Multi: dim the strip so the centered badge reads clearly.
+        // Multi: gradually dim the strip so the centered badge reads clearly.
         // Single: keep the lone tool fully visible; badge still overlays value.
-        presetRowOpacity.value = withTiming(multiPreset ? 0.06 : 1, {
-            duration: 140,
+        presetRowOpacity.value = withTiming(multiPreset ? PRESET_DIM_OPACITY : 1, {
+            duration: PRESET_DIM_OUT_MS,
         });
-        valueBadgeOpacity.value = withTiming(1, { duration: 100 });
+        valueBadgeOpacity.value = withTiming(1, { duration: VALUE_BADGE_IN_MS });
     }, [multiPreset, presetRowOpacity, valueBadgeOpacity]);
 
     const handleInteractionEnd = useCallback(() => {
         setIsInteracting(false);
-        presetRowOpacity.value = withTiming(1, { duration: 160 });
+        presetRowOpacity.value = withTiming(1, { duration: PRESET_DIM_IN_MS });
         hideBadgeTimerRef.current = setTimeout(() => {
-            valueBadgeOpacity.value = withTiming(0, { duration: 180 });
+            valueBadgeOpacity.value = withTiming(0, { duration: VALUE_BADGE_OUT_MS });
             hideBadgeTimerRef.current = null;
         }, VALUE_BADGE_DELAY_MS);
     }, [presetRowOpacity, valueBadgeOpacity]);

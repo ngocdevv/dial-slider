@@ -27,6 +27,23 @@ export const DIAL_CONFIG = {
 
     /** How long the centered value badge stays after drag ends */
     VALUE_BADGE_DELAY_MS: 650,
+
+    /** Preset strip fade while the ruler is being dragged */
+    PRESET_DIM_OPACITY: 0.06,
+    /** Fade-out when drag begins — ~1s until presets are fully dimmed */
+    PRESET_DIM_OUT_MS: 1000,
+    /** Fade-in when drag ends */
+    PRESET_DIM_IN_MS: 280,
+    /** Value badge appear/disappear */
+    VALUE_BADGE_IN_MS: 180,
+    VALUE_BADGE_OUT_MS: 220,
+
+    /**
+     * Fling coast keeps full release velocity so a fast swipe still travels.
+     * Braking is applied only as the coast settles (snap spring at the end).
+     * Lower deceleration = longer coast; closer to 1 = slipperier.
+     */
+    FLING_DECELERATION: 0.995,
 } as const;
 
 export const COLORS = {

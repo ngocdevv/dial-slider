@@ -11,6 +11,7 @@ import Animated, {
     withDecay,
     withDelay,
     withSequence,
+    withSpring,
     withTiming,
     type SharedValue,
 } from 'react-native-reanimated';
@@ -25,6 +26,7 @@ const {
     TICK_WIDTH,
     TICK_STEP,
     MAJOR_TICK_EVERY,
+    FLING_DECELERATION,
 } = DIAL_CONFIG;
 const MAX_RENDERED_TICKS = 201;
 
@@ -248,6 +250,8 @@ export function DialRuler({
     const isGestureActive = useSharedValue(0);
     const gestureRevision = useSharedValue(0);
     const isProgrammaticMove = useSharedValue(0);
+    /** Preset/config switch: dim briefly, then restore full brightness */
+    const contentOpacity = useSharedValue(1);
 
     const interactionStartRef = useRef(onInteractionStart);
     const interactionEndRef = useRef(onInteractionEnd);
@@ -290,21 +294,41 @@ export function DialRuler({
         })
         .onEnd((e) => {
             isDragging.value = withTiming(0, { duration: 200 });
+
+            // Phase 1: free coast with full release velocity so a fast swipe
+            // still travels far left/right.
+            // Phase 2: once coast energy is spent, brake into the nearest
+            // integer value with an overshoot-clamped spring (end-only hãm).
+            cancelAnimation(translationX);
             translationX.value = withDecay(
                 {
                     velocity: e.velocityX,
                     clamp: [minTranslation, maxTranslation],
-                    deceleration: 0.997,
+                    deceleration: FLING_DECELERATION,
                 },
                 (finished) => {
-                    if (finished) {
-                        const snapped =
-                            Math.round(translationX.value / TICK_SPACING) *
-                            TICK_SPACING;
-                        translationX.value = withTiming(snapped, {
-                            duration: 120,
-                        });
-                    }
+                    if (!finished) return;
+                    const snapped =
+                        Math.round(translationX.value / TICK_SPACING) *
+                        TICK_SPACING;
+                    const targetX = Math.max(
+                        minTranslation,
+                        Math.min(maxTranslation, snapped)
+                    );
+                    translationX.value = withSpring(
+                        targetX,
+                        {
+                            damping: 34,
+                            stiffness: 280,
+                            mass: 0.75,
+                            overshootClamping: true,
+                        },
+                        (springFinished) => {
+                            if (springFinished) {
+                                translationX.value = targetX;
+                            }
+                        }
+                    );
                 }
             );
         })
@@ -366,45 +390,64 @@ export function DialRuler({
         }
     );
 
+    // Preset switch (revision bump): soften the ruler handoff with a dim → bright pulse.
+    useAnimatedReaction(
+        () => (interactionRevision ? interactionRevision.value : 0),
+        (current, previous) => {
+            if (previous === null || current === previous) return;
+            cancelAnimation(contentOpacity);
+            contentOpacity.value = withSequence(
+                withTiming(0.28, { duration: 160 }),
+                withTiming(1, { duration: 380 })
+            );
+        }
+    );
+
+    const contentStyle = useAnimatedStyle(() => ({
+        opacity: contentOpacity.value,
+    }));
+
     return (
         <View
             style={styles.container}
             accessible={false}
             importantForAccessibility="no-hide-descendants"
         >
-            <GestureDetector gesture={gesture}>
-                <Animated.View style={styles.rulerArea}>
-                    <OriginDot translationX={translationX} />
+            <Animated.View style={[styles.content, contentStyle]}>
+                <GestureDetector gesture={gesture}>
+                    <Animated.View style={styles.rulerArea}>
+                        <OriginDot translationX={translationX} />
 
-                    <View style={styles.ticksContainer}>
-                        {ticks.map((tick) => (
-                            <Tick
-                                key={tick.val}
-                                tickValue={tick.val}
-                                isMajor={tick.isMajor}
-                                translationX={translationX}
-                                dragStartX={startX}
-                                isDragging={isDragging}
-                                screenCenter={screenCenter}
-                                tickValues={tickValues}
-                            />
-                        ))}
-                    </View>
-                </Animated.View>
-            </GestureDetector>
+                        <View style={styles.ticksContainer}>
+                            {ticks.map((tick) => (
+                                <Tick
+                                    key={tick.val}
+                                    tickValue={tick.val}
+                                    isMajor={tick.isMajor}
+                                    translationX={translationX}
+                                    dragStartX={startX}
+                                    isDragging={isDragging}
+                                    screenCenter={screenCenter}
+                                    tickValues={tickValues}
+                                />
+                            ))}
+                        </View>
+                    </Animated.View>
+                </GestureDetector>
 
-            <LinearGradient
-                colors={[fadeColor, 'transparent']}
-                start={{ x: 0, y: 0.5 }}
-                end={{ x: 1, y: 0.5 }}
-                style={styles.leftMask}
-            />
-            <LinearGradient
-                colors={['transparent', fadeColor]}
-                start={{ x: 0, y: 0.5 }}
-                end={{ x: 1, y: 0.5 }}
-                style={styles.rightMask}
-            />
+                <LinearGradient
+                    colors={[fadeColor, 'transparent']}
+                    start={{ x: 0, y: 0.5 }}
+                    end={{ x: 1, y: 0.5 }}
+                    style={styles.leftMask}
+                />
+                <LinearGradient
+                    colors={['transparent', fadeColor]}
+                    start={{ x: 0, y: 0.5 }}
+                    end={{ x: 1, y: 0.5 }}
+                    style={styles.rightMask}
+                />
+            </Animated.View>
         </View>
     );
 }
@@ -420,6 +463,10 @@ const styles = StyleSheet.create({
         height: RULER_HEIGHT,
         position: 'relative',
         overflow: 'hidden',
+    },
+    content: {
+        flex: 1,
+        width: '100%',
     },
     rulerArea: {
         flex: 1,
