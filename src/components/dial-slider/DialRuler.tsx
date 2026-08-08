@@ -11,7 +11,7 @@ import Animated, {
     withDelay,
     withSequence,
     withTiming,
-    type SharedValue
+    type SharedValue,
 } from 'react-native-reanimated';
 
 import { COLORS, DIAL_CONFIG } from './constants';
@@ -20,20 +20,38 @@ const {
     TICK_SPACING,
     TICK_HEIGHT,
     CENTER_TICK_HEIGHT,
-    TICK_WIDTH
+    TICK_WIDTH,
+    TICK_STEP,
+    MAJOR_TICK_EVERY,
 } = DIAL_CONFIG;
 
 // ─── Types ────────────────────────────────────────────────────────────
 
 interface DialRulerProps {
     value: SharedValue<number>;
+    /** Plain number — avoid reading shared value during render */
+    initialValue: number;
     minValue: number;
     maxValue: number;
+    /** Edge fade color; should match the surface behind the ruler */
+    fadeColor?: string;
 }
 
+// Parse #RRGGBB once on JS thread for worklet color blends
+function hexToRgb(hex: string): { r: number; g: number; b: number } {
+    const h = hex.replace('#', '');
+    return {
+        r: parseInt(h.slice(0, 2), 16),
+        g: parseInt(h.slice(2, 4), 16),
+        b: parseInt(h.slice(4, 6), 16),
+    };
+}
+
+const MINOR_RGB = hexToRgb(COLORS.MINOR_TICK);
+const MAJOR_RGB = hexToRgb(COLORS.MAJOR_TICK);
+
 // ─── Tick (bottom-aligned, directional wave) ─────────────────────────
-// Wave is one-sided: only ticks ahead of the sweep direction are affected.
-// WAVE_RADIUS scales with drag velocity: faster = wider ripple.
+// Wave is one-sided: only ticks in the drag range are affected.
 
 const Tick = React.memo(function Tick({
     tickValue,
@@ -51,7 +69,6 @@ const Tick = React.memo(function Tick({
     screenCenter: number;
 }) {
     const tickX = tickValue * TICK_SPACING;
-    const TICK_STEP = 5;
     const heightAnim = useSharedValue(TICK_HEIGHT as number);
     const colorAnim = useSharedValue(0); // 0=MINOR, 1=MAJOR
 
@@ -59,7 +76,8 @@ const Tick = React.memo(function Tick({
     useAnimatedReaction(
         () => {
             const currentValue = -translationX.value / TICK_SPACING;
-            const nearestTickVal = Math.round(currentValue / TICK_STEP) * TICK_STEP;
+            const nearestTickVal =
+                Math.round(currentValue / TICK_STEP) * TICK_STEP;
             return tickValue === nearestTickVal;
         },
         (isNearest, wasNearest) => {
@@ -77,12 +95,10 @@ const Tick = React.memo(function Tick({
         () => Math.round(-translationX.value / TICK_SPACING),
         (currentVal, prevVal) => {
             if (prevVal === null) return;
-            // Did the value just cross this tick?
             const crossed =
                 (prevVal < tickValue && currentVal >= tickValue) ||
                 (prevVal > tickValue && currentVal <= tickValue);
             if (crossed) {
-                // Pulse: bright → fade back
                 cancelAnimation(colorAnim);
                 colorAnim.value = withSequence(
                     withTiming(1, { duration: 0 }),
@@ -106,29 +122,27 @@ const Tick = React.memo(function Tick({
 
         const inRange = tickValue >= lo && tickValue <= hi && rangeSize > 0;
 
-        // Cosine wave: tallest near current, drops off sharply toward start
+        // Cosine wave: tallest near current, drops off toward start
         const distFromCurrent = Math.abs(currentVal - tickValue);
-        const rawDist = rangeSize > 0 ? Math.min(distFromCurrent / rangeSize, 1) : 1;
+        const rawDist =
+            rangeSize > 0 ? Math.min(distFromCurrent / rangeSize, 1) : 1;
         const normalizedDist = Math.sqrt(rawDist);
         const waveFactor = inRange
             ? ((Math.cos(normalizedDist * Math.PI) + 1) / 2) * isDragging.value
             : 0;
-        const waveHeight = TICK_HEIGHT + (CENTER_TICK_HEIGHT - TICK_HEIGHT) * waveFactor;
+        const waveHeight =
+            TICK_HEIGHT + (CENTER_TICK_HEIGHT - TICK_HEIGHT) * waveFactor;
 
-        // Use animated height (smooth transition), but allow wave to override if taller
         const height = Math.max(heightAnim.value, waveHeight);
 
-        // Color: yellow for nearest, smooth fade for wave
-        const nearestTickVal = Math.round(currentVal / TICK_STEP) * TICK_STEP;
+        const nearestTickVal =
+            Math.round(currentVal / TICK_STEP) * TICK_STEP;
         const isNearest = tickValue === nearestTickVal;
 
-        // Blend MINOR→MAJOR using animated colorAnim
-        const r1 = 0x3D, g1 = 0x3D, b1 = 0x3D; // MINOR_TICK #3D3D3D
-        const r2 = 0xCC, g2 = 0xCC, b2 = 0xCC; // MAJOR_TICK #CCCCCC
         const t = isMajor ? 1 : colorAnim.value;
-        const r = Math.round(r1 + (r2 - r1) * t);
-        const g = Math.round(g1 + (g2 - g1) * t);
-        const b = Math.round(b1 + (b2 - b1) * t);
+        const r = Math.round(MINOR_RGB.r + (MAJOR_RGB.r - MINOR_RGB.r) * t);
+        const g = Math.round(MINOR_RGB.g + (MAJOR_RGB.g - MINOR_RGB.g) * t);
+        const b = Math.round(MINOR_RGB.b + (MAJOR_RGB.b - MINOR_RGB.b) * t);
         const blendedColor = `rgb(${r},${g},${b})`;
 
         return {
@@ -141,26 +155,18 @@ const Tick = React.memo(function Tick({
 
     return (
         <Animated.View
-            style={[
-                styles.tick,
-                { width: TICK_WIDTH },
-                animStyle,
-            ]}
+            style={[styles.tick, { width: TICK_WIDTH }, animStyle]}
+            accessible={false}
+            importantForAccessibility="no-hide-descendants"
         />
     );
 });
 
 // ─── Origin Dot (always at value 0) ───────────────────────────────────
 
-function OriginDot({
-    translationX,
-}: {
-    translationX: SharedValue<number>;
-}) {
-    // Value 0 → position 0 * TICK_SPACING = 0
+function OriginDot({ translationX }: { translationX: SharedValue<number> }) {
     const animStyle = useAnimatedStyle(() => {
-        const x = translationX.value; // 0 + translationX
-        // Hide when value is at 0 (origin dot overlaps current tick)
+        const x = translationX.value;
         const isAtZero = Math.abs(x) < 2;
         const fadeOpacity = Math.max(0, 1 - Math.abs(x) / 160);
         const opacity = isAtZero ? 0 : fadeOpacity;
@@ -170,37 +176,51 @@ function OriginDot({
         };
     });
 
-    return <Animated.View style={[styles.originDot, animStyle]} />;
+    return (
+        <Animated.View
+            style={[styles.originDot, animStyle]}
+            accessible={false}
+            importantForAccessibility="no"
+        />
+    );
 }
 
 // ─── Main DialRuler ───────────────────────────────────────────────────
 
 export function DialRuler({
     value,
+    initialValue,
     minValue,
-    maxValue
+    maxValue,
+    fadeColor = COLORS.BACKGROUND,
 }: DialRulerProps) {
     const { width: screenWidth } = useWindowDimensions();
     const screenCenter = screenWidth / 2;
 
-    // 20 ticks per side (step = 5), major = multiples of 10 (white)
     const ticks = useMemo(() => {
         const result: { val: number; isMajor: boolean }[] = [];
-        for (let val = minValue; val <= maxValue; val += 5) {
-            result.push({ val, isMajor: val % 50 === 0 });
+        for (let val = minValue; val <= maxValue; val += TICK_STEP) {
+            result.push({
+                val,
+                isMajor: val % MAJOR_TICK_EVERY === 0,
+            });
         }
         return result;
     }, [minValue, maxValue]);
 
-    const translationX = useSharedValue(0);
-    const startX = useSharedValue(0);
-    const isDragging = useSharedValue(0);
-    const dragVelocity = useSharedValue(0);
-
-    // Clamp: value range [minValue, maxValue] → translationX range
+    // value → translation: x = -value * spacing
     const minTranslation = -maxValue * TICK_SPACING;
     const maxTranslation = -minValue * TICK_SPACING;
 
+    // Use plain initialValue prop — never read shared value.value during render
+    const initialTranslation = Math.max(
+        minTranslation,
+        Math.min(maxTranslation, -initialValue * TICK_SPACING)
+    );
+
+    const translationX = useSharedValue(initialTranslation);
+    const startX = useSharedValue(initialTranslation);
+    const isDragging = useSharedValue(0);
 
     const gesture = Gesture.Pan()
         .onBegin(() => {
@@ -212,8 +232,6 @@ export function DialRuler({
                 minTranslation,
                 Math.min(maxTranslation, newX)
             );
-            // Track velocity for directional wave
-            dragVelocity.value = e.velocityX;
             // Wave: active while moving, auto-fade after 100ms idle
             cancelAnimation(isDragging);
             isDragging.value = withSequence(
@@ -232,31 +250,56 @@ export function DialRuler({
                 (finished) => {
                     if (finished) {
                         const snapped =
-                            Math.round(translationX.value / TICK_SPACING) * TICK_SPACING;
-                        translationX.value = withTiming(snapped, { duration: 120 });
+                            Math.round(translationX.value / TICK_SPACING) *
+                            TICK_SPACING;
+                        translationX.value = withTiming(snapped, {
+                            duration: 120,
+                        });
                     }
                 }
             );
         });
 
-    // Continuously sync translationX → value (covers both pan + decay)
+    // translationX → value (pan + decay)
     useAnimatedReaction(
         () => Math.round(-translationX.value / TICK_SPACING),
         (current, previous) => {
-            if (current !== previous) {
+            if (current !== previous && current !== Math.round(value.value)) {
                 value.value = current;
             }
         }
     );
 
+    // value → translationX (a11y / external writes). Skip while dragging.
+    useAnimatedReaction(
+        () => Math.round(value.value),
+        (current, previous) => {
+            if (previous === null) return;
+            if (current === previous) return;
+            if (isDragging.value !== 0) return;
+
+            const fromX = Math.round(-translationX.value / TICK_SPACING);
+            if (fromX === current) return;
+
+            const target = Math.max(
+                minTranslation,
+                Math.min(maxTranslation, -current * TICK_SPACING)
+            );
+            cancelAnimation(translationX);
+            translationX.value = withTiming(target, { duration: 120 });
+        }
+    );
+
     return (
-        <View style={styles.container}>
+        <View
+            style={styles.container}
+            accessible={false}
+            importantForAccessibility="no-hide-descendants"
+        >
             <GestureDetector gesture={gesture}>
                 <Animated.View style={styles.rulerArea}>
-                    {/* Origin dot — always at value 0 */}
                     <OriginDot translationX={translationX} />
 
-                    {/* Tick marks — only for values > 0, bottom-aligned */}
                     <View style={styles.ticksContainer}>
                         {ticks.map((tick) => (
                             <Tick
@@ -270,21 +313,18 @@ export function DialRuler({
                             />
                         ))}
                     </View>
-
-                    {/* No separate center indicator — the tick at current value acts as it */}
                 </Animated.View>
             </GestureDetector>
 
-            {/* Edge gradient masks */}
             <LinearGradient
-                colors={['#000000', 'transparent']}
+                colors={[fadeColor, 'transparent']}
                 start={{ x: 0, y: 0.5 }}
                 end={{ x: 1, y: 0.5 }}
                 style={styles.leftMask}
                 pointerEvents="none"
             />
             <LinearGradient
-                colors={['transparent', '#000000']}
+                colors={['transparent', fadeColor]}
                 start={{ x: 0, y: 0.5 }}
                 end={{ x: 1, y: 0.5 }}
                 style={styles.rightMask}
@@ -322,7 +362,7 @@ const styles = StyleSheet.create({
         position: 'absolute',
         bottom: 0,
         height: TICK_HEIGHT,
-        borderRadius: 1
+        borderRadius: 1,
     },
     originDot: {
         position: 'absolute',

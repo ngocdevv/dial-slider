@@ -16,14 +16,30 @@ const CENTER = SIZE / 2;
 
 interface ProgressRingProps {
     value: SharedValue<number>;
+    minValue?: number;
     maxValue?: number;
 }
 
-export function ProgressRing({ value, maxValue = 100 }: ProgressRingProps) {
+/** Bipolar fill: + side vs maxValue, − side vs |minValue|. */
+function progressForValue(v: number, minValue: number, maxValue: number) {
+    'worklet';
+    if (v >= 0) {
+        if (maxValue <= 0) return 0;
+        return Math.min(v / maxValue, 1);
+    }
+    if (minValue >= 0) return 0;
+    return Math.min(Math.abs(v) / Math.abs(minValue), 1);
+}
+
+export function ProgressRing({
+    value,
+    minValue = DIAL_CONFIG.MIN_VALUE,
+    maxValue = DIAL_CONFIG.MAX_VALUE,
+}: ProgressRingProps) {
     const arcPath = useDerivedValue(() => {
         const path = Skia.Path.Make();
-        const progress = Math.abs(value.value) / maxValue;
-        const sweepAngle = Math.min(progress, 1) * 360;
+        const progress = progressForValue(value.value, minValue, maxValue);
+        const sweepAngle = progress * 360;
 
         if (sweepAngle <= 0) return path;
 

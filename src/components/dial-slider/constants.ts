@@ -1,29 +1,31 @@
 export const DIAL_CONFIG = {
-    // ─── Tick spacing & dimensions ─────────────────
-    // Apple iOS dial uses ~8dp between ticks with 20 ticks per side
+    /**
+     * Horizontal distance (dp) per value unit.
+     * Dense packing so ±100 fits a phone width with tick marks every 5 units.
+     * (Not the classic ~8dp Apple wheel spacing — that targets fewer marks.)
+     */
     TICK_SPACING: 1.5,
     TICK_HEIGHT: 14,
     TICK_WIDTH: 2,
 
-    // Center indicator
+    /** Height of the tick nearest the center indicator */
     CENTER_TICK_HEIGHT: 28,
-    CENTER_TICK_WIDTH: 2.5,
 
-    // ─── Value range (defaults, overridable via props) ─────
+    /** Tick mark interval along the ruler */
+    TICK_STEP: 5,
+    /** Major (brighter) ticks every N value units */
+    MAJOR_TICK_EVERY: 50,
+
+    /** Default value range (overridable via props) */
     MIN_VALUE: -100,
     MAX_VALUE: 100,
 
-    // ─── Ring ──────────────────────────────────────
-    // Compact circle matching Apple's ~44dp diameter
+    /** Compact ring ~44dp outer diameter */
     RING_RADIUS: 22,
     RING_STROKE_WIDTH: 2,
     RING_BG_STROKE_WIDTH: 1.5,
 
-    // ─── Value display ─────────────────────────────
     VALUE_FONT_SIZE: 14,
-
-    // ─── Spacing ───────────────────────────────────
-    GAP_RING_RULER: 8,
 } as const;
 
 export const COLORS = {

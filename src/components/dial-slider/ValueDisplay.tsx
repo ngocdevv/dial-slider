@@ -15,10 +15,21 @@ const CIRCLE_SIZE = (RING_RADIUS + RING_STROKE_WIDTH) * 2;
 
 interface ValueDisplayProps {
     value: SharedValue<number>;
+    /** Plain number — avoid reading shared value during render */
+    initialValue: number;
+    minValue: number;
+    maxValue: number;
 }
 
-export function ValueDisplay({ value }: ValueDisplayProps) {
-    const [displayText, setDisplayText] = useState('0');
+export function ValueDisplay({
+    value,
+    initialValue,
+    minValue,
+    maxValue,
+}: ValueDisplayProps) {
+    const [displayText, setDisplayText] = useState(
+        () => `${Math.round(initialValue)}`
+    );
 
     useAnimatedReaction(
         () => Math.round(value.value),
@@ -34,10 +45,17 @@ export function ValueDisplay({ value }: ValueDisplayProps) {
     }));
 
     return (
-        <View style={styles.container}>
-            <ProgressRing value={value} />
-            <View style={styles.textContainer}>
-                <Animated.Text style={[styles.valueText, textStyle]}>
+        <View
+            style={styles.container}
+            accessible={false}
+            importantForAccessibility="no-hide-descendants"
+        >
+            <ProgressRing value={value} minValue={minValue} maxValue={maxValue} />
+            <View style={styles.textContainer} pointerEvents="none">
+                <Animated.Text
+                    style={[styles.valueText, textStyle]}
+                    accessible={false}
+                >
                     {displayText}
                 </Animated.Text>
             </View>

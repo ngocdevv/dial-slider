@@ -1,5 +1,9 @@
-import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import React, { useCallback, useRef, useState } from 'react';
+import {
+    AccessibilityActionEvent,
+    StyleSheet,
+    View,
+} from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import {
     runOnJS,
@@ -7,19 +11,31 @@ import {
     useSharedValue,
 } from 'react-native-reanimated';
 
-import { DIAL_CONFIG } from './constants';
+import { COLORS, DIAL_CONFIG } from './constants';
 import { DialRuler } from './DialRuler';
 import { ValueDisplay } from './ValueDisplay';
 
-interface DialSliderProps {
+function clamp(n: number, min: number, max: number) {
+    if (min > max) return n;
+    return Math.min(max, Math.max(min, n));
+}
+
+export interface DialSliderProps {
     /** Minimum value (default: -100) */
     minValue?: number;
     /** Maximum value (default: 100) */
     maxValue?: number;
-    /** Starting value (default: 0) */
+    /** Starting value (default: 0), clamped to [minValue, maxValue] */
     initialValue?: number;
-    /** Called on each value change */
+    /** Called on each integer value change */
     onValueChange?: (value: number) => void;
+    /**
+     * Color of the ruler edge fade masks (should match the surface behind the dial).
+     * Defaults to black (`COLORS.BACKGROUND`).
+     */
+    fadeColor?: string;
+    /** Accessibility label for VoiceOver / TalkBack */
+    accessibilityLabel?: string;
 }
 
 export function DialSlider({
@@ -27,26 +43,85 @@ export function DialSlider({
     maxValue = DIAL_CONFIG.MAX_VALUE,
     initialValue = 0,
     onValueChange,
+    fadeColor = COLORS.BACKGROUND,
+    accessibilityLabel = 'Dial slider',
 }: DialSliderProps) {
-    const value = useSharedValue(initialValue);
+    const lo = Math.min(minValue, maxValue);
+    const hi = Math.max(minValue, maxValue);
+    const clampedInitial = clamp(initialValue, lo, hi);
+
+    const value = useSharedValue(clampedInitial);
+    const [a11yNow, setA11yNow] = useState(clampedInitial);
+
+    // Stable JS bridge so worklets never capture a stale onValueChange
+    const onValueChangeRef = useRef(onValueChange);
+    onValueChangeRef.current = onValueChange;
+
+    const notifyValueChange = useCallback((next: number) => {
+        setA11yNow(next);
+        onValueChangeRef.current?.(next);
+    }, []);
 
     useAnimatedReaction(
         () => Math.round(value.value),
         (current, previous) => {
-            if (current !== previous && onValueChange) {
-                runOnJS(onValueChange)(current);
+            if (current !== previous) {
+                runOnJS(notifyValueChange)(current);
             }
         }
     );
 
+    const adjustBy = useCallback(
+        (delta: number) => {
+            const next = clamp(Math.round(value.value) + delta, lo, hi);
+            // External write — DialRuler syncs translation; reaction notifies JS
+            if (next !== Math.round(value.value)) {
+                value.value = next;
+            }
+        },
+        [lo, hi, value]
+    );
+
+    const onAccessibilityAction = useCallback(
+        (event: AccessibilityActionEvent) => {
+            switch (event.nativeEvent.actionName) {
+                case 'increment':
+                    adjustBy(1);
+                    break;
+                case 'decrement':
+                    adjustBy(-1);
+                    break;
+            }
+        },
+        [adjustBy]
+    );
+
     return (
         <GestureHandlerRootView style={styles.gestureRoot}>
-            <View style={styles.container}>
-                <ValueDisplay value={value} />
+            <View
+                style={styles.container}
+                accessible
+                accessibilityRole="adjustable"
+                accessibilityLabel={accessibilityLabel}
+                accessibilityValue={{ min: lo, max: hi, now: a11yNow }}
+                accessibilityActions={[
+                    { name: 'increment', label: 'Increment' },
+                    { name: 'decrement', label: 'Decrement' },
+                ]}
+                onAccessibilityAction={onAccessibilityAction}
+            >
+                <ValueDisplay
+                    value={value}
+                    initialValue={clampedInitial}
+                    minValue={lo}
+                    maxValue={hi}
+                />
                 <DialRuler
                     value={value}
-                    minValue={minValue}
-                    maxValue={maxValue}
+                    initialValue={clampedInitial}
+                    minValue={lo}
+                    maxValue={hi}
+                    fadeColor={fadeColor}
                 />
             </View>
         </GestureHandlerRootView>

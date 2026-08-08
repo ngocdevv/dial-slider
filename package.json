@@ -20,7 +20,6 @@
     "expo-device": "~55.0.9",
     "expo-font": "~55.0.4",
     "expo-glass-effect": "~55.0.7",
-    "expo-haptics": "^55.0.8",
     "expo-image": "~55.0.6",
     "expo-linear-gradient": "^55.0.8",
     "expo-linking": "~55.0.7",
@@ -42,6 +41,8 @@
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
+    "eslint": "^9.0.0",
+    "eslint-config-expo": "~55.0.1",
     "typescript": "~5.9.2"
   },
   "private": true
