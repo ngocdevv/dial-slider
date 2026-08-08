@@ -13,6 +13,11 @@ function clampFiniteDialValue(value: number) {
     );
 }
 
+export function clampDialValue(value: number, min: number, max: number) {
+    'worklet';
+    return Math.min(max, Math.max(min, value));
+}
+
 export function normalizeDialRange(
     first: number,
     second: number,

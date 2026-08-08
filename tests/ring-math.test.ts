@@ -1,5 +1,6 @@
 import {
     createCircularArcPath,
+    getBipolarProgress,
     getSignedProgressColor,
 } from '../src/components/dial-slider/ring-math';
 
@@ -44,6 +45,19 @@ assert(
 assert(
     getSignedProgressColor(1, accentColor, negativeColor) === accentColor,
     'Positive progress must keep the positive color'
+);
+
+assert(
+    getBipolarProgress(50, -100, 100) === 0.5,
+    'Positive progress is relative to max'
+);
+assert(
+    getBipolarProgress(-25, -100, 100) === 0.25,
+    'Negative progress is relative to |min|'
+);
+assert(
+    getBipolarProgress(0, -100, 100) === 0,
+    'Zero has no active arc progress'
 );
 
 console.log('ring-math regression: PASS');

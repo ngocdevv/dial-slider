@@ -1,8 +1,7 @@
-export { DialSlider, type DialSliderProps } from './DialSlider';
 export {
-    PresetDialSlider,
+    DialSlider,
     type DialPreset,
     type DialPresetIconState,
-    type PresetDialSliderProps,
-} from './PresetDialSlider';
+    type DialSliderProps,
+} from './DialSlider';
 export { COLORS, DIAL_CONFIG } from './constants';

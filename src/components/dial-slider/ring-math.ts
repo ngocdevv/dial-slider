@@ -3,6 +3,12 @@ interface Point {
     y: number;
 }
 
+/** Bipolar fill: + side vs maxValue, − side vs |minValue|. */
+export function getBipolarProgress(value: number, minValue: number, maxValue: number) {
+    if (value >= 0) return maxValue <= 0 ? 0 : Math.min(value / maxValue, 1);
+    return minValue >= 0 ? 0 : Math.min(Math.abs(value) / Math.abs(minValue), 1);
+}
+
 export function getSignedProgressColor(
     value: number,
     positiveColor: string,

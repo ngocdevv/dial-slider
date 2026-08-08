@@ -2,7 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import {
-  PresetDialSlider,
+  DialSlider,
   type DialPreset,
 } from '@/components/dial-slider';
 
@@ -14,6 +14,11 @@ function PresetGlyph({ children, selected }: { children: string; selected: boole
   );
 }
 
+/**
+ * Demo tool list. Length decides chrome:
+ * - 1 item  → single centered tool + ruler
+ * - N items → horizontal preset strip + shared ruler
+ */
 const PHOTO_PRESETS: readonly DialPreset[] = [
   {
     id: 'exposure',
@@ -99,7 +104,7 @@ export default function HomeScreen() {
         </Text>
 
         <View style={styles.dialSurface}>
-          <PresetDialSlider
+          <DialSlider
             presets={PHOTO_PRESETS}
             initialPresetId="highlights"
             onPresetChange={handlePresetChange}
