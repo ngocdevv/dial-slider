@@ -1,5 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useCallback, useMemo, useRef } from 'react';
+import React, { useCallback, useLayoutEffect, useMemo, useRef } from 'react';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -251,8 +251,10 @@ export function DialRuler({
 
     const interactionStartRef = useRef(onInteractionStart);
     const interactionEndRef = useRef(onInteractionEnd);
-    interactionStartRef.current = onInteractionStart;
-    interactionEndRef.current = onInteractionEnd;
+    useLayoutEffect(() => {
+        interactionStartRef.current = onInteractionStart;
+        interactionEndRef.current = onInteractionEnd;
+    });
 
     const notifyInteractionStart = useCallback(() => {
         interactionStartRef.current?.();

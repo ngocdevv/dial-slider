@@ -1,12 +1,15 @@
 import React, { useCallback, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import {
-  DialSlider,
-  type DialPreset,
-} from '@/components/dial-slider';
+import { DialSlider, type DialPreset } from '@/components/dial-slider';
 
-function PresetGlyph({ children, selected }: { children: string; selected: boolean }) {
+function PresetGlyph({
+  children,
+  selected,
+}: {
+  children: string;
+  selected: boolean;
+}) {
   return (
     <Text style={[styles.glyph, selected && styles.selectedGlyph]}>
       {children}
@@ -93,7 +96,8 @@ export default function HomeScreen() {
   }, []);
 
   const activeLabel =
-    PHOTO_PRESETS.find((preset) => preset.id === activePreset)?.label ?? activePreset;
+    PHOTO_PRESETS.find((preset) => preset.id === activePreset)?.label ??
+    activePreset;
 
   return (
     <View style={styles.container}>

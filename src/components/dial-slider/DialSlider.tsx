@@ -2,6 +2,7 @@ import React, {
     type ReactNode,
     useCallback,
     useEffect,
+    useLayoutEffect,
     useMemo,
     useRef,
     useState,
@@ -277,12 +278,15 @@ export function DialSlider({
     const hideBadgeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const scrollRef = useRef<ScrollView>(null);
 
-    selectedIdRef.current = selectedId;
-    valuesRef.current = values;
-    presetsRef.current = presets;
-    onValueChangeRef.current = onValueChange;
-    onValuesChangeRef.current = onValuesChange;
-    onPresetChangeRef.current = onPresetChange;
+    // Keep latest JS bridges for worklets / async callbacks without re-render churn.
+    useLayoutEffect(() => {
+        selectedIdRef.current = selectedId;
+        valuesRef.current = values;
+        presetsRef.current = presets;
+        onValueChangeRef.current = onValueChange;
+        onValuesChangeRef.current = onValuesChange;
+        onPresetChangeRef.current = onPresetChange;
+    });
 
     const value = useSharedValue(initialSelectedValue);
     const interactionRevision = useSharedValue(0);
@@ -688,7 +692,7 @@ const styles = StyleSheet.create({
         opacity: 0.88,
     },
     ringCanvas: {
-        ...StyleSheet.absoluteFillObject,
+        ...StyleSheet.absoluteFill,
         width: ITEM_SIZE,
         height: ITEM_SIZE,
         pointerEvents: 'none',
