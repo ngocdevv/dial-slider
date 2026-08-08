@@ -51,7 +51,7 @@ export function ValueDisplay({
             importantForAccessibility="no-hide-descendants"
         >
             <ProgressRing value={value} minValue={minValue} maxValue={maxValue} />
-            <View style={styles.textContainer} pointerEvents="none">
+            <View style={styles.textContainer}>
                 <Animated.Text
                     style={[styles.valueText, textStyle]}
                     accessible={false}
@@ -74,6 +74,7 @@ const styles = StyleSheet.create({
         ...StyleSheet.absoluteFillObject,
         alignItems: 'center',
         justifyContent: 'center',
+        pointerEvents: 'none',
     },
     valueText: {
         fontSize: VALUE_FONT_SIZE,

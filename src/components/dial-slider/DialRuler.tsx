@@ -1,9 +1,10 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo, useRef } from 'react';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
     cancelAnimation,
+    runOnJS,
     useAnimatedReaction,
     useAnimatedStyle,
     useSharedValue,
@@ -15,6 +16,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { COLORS, DIAL_CONFIG } from './constants';
+import { buildDialTickValues, getNearestDialTick } from './dial-math';
 
 const {
     TICK_SPACING,
@@ -24,6 +26,7 @@ const {
     TICK_STEP,
     MAJOR_TICK_EVERY,
 } = DIAL_CONFIG;
+const MAX_RENDERED_TICKS = 201;
 
 // ─── Types ────────────────────────────────────────────────────────────
 
@@ -35,6 +38,14 @@ interface DialRulerProps {
     maxValue: number;
     /** Edge fade color; should match the surface behind the ruler */
     fadeColor?: string;
+    /** Called when the pan gesture begins */
+    onInteractionStart?: () => void;
+    /** Called when the pan gesture ends or is cancelled */
+    onInteractionEnd?: () => void;
+    /** Disable ruler gestures while preserving its visual state */
+    enabled?: boolean;
+    /** Invalidates decay/value callbacks when the owning preset changes */
+    interactionRevision?: SharedValue<number>;
 }
 
 // Parse #RRGGBB once on JS thread for worklet color blends
@@ -60,6 +71,7 @@ const Tick = React.memo(function Tick({
     dragStartX,
     isDragging,
     screenCenter,
+    tickValues,
 }: {
     tickValue: number;
     isMajor: boolean;
@@ -67,6 +79,7 @@ const Tick = React.memo(function Tick({
     dragStartX: SharedValue<number>;
     isDragging: SharedValue<number>;
     screenCenter: number;
+    tickValues: readonly number[];
 }) {
     const tickX = tickValue * TICK_SPACING;
     const heightAnim = useSharedValue(TICK_HEIGHT as number);
@@ -76,8 +89,10 @@ const Tick = React.memo(function Tick({
     useAnimatedReaction(
         () => {
             const currentValue = -translationX.value / TICK_SPACING;
-            const nearestTickVal =
-                Math.round(currentValue / TICK_STEP) * TICK_STEP;
+            const nearestTickVal = getNearestDialTick(
+                currentValue,
+                tickValues
+            );
             return tickValue === nearestTickVal;
         },
         (isNearest, wasNearest) => {
@@ -135,8 +150,7 @@ const Tick = React.memo(function Tick({
 
         const height = Math.max(heightAnim.value, waveHeight);
 
-        const nearestTickVal =
-            Math.round(currentVal / TICK_STEP) * TICK_STEP;
+        const nearestTickVal = getNearestDialTick(currentVal, tickValues);
         const isNearest = tickValue === nearestTickVal;
 
         const t = isMajor ? 1 : colorAnim.value;
@@ -193,20 +207,30 @@ export function DialRuler({
     minValue,
     maxValue,
     fadeColor = COLORS.BACKGROUND,
+    onInteractionStart,
+    onInteractionEnd,
+    enabled = true,
+    interactionRevision,
 }: DialRulerProps) {
     const { width: screenWidth } = useWindowDimensions();
     const screenCenter = screenWidth / 2;
 
+    const tickValues = useMemo(
+        () =>
+            buildDialTickValues(
+                minValue,
+                maxValue,
+                TICK_STEP,
+                MAX_RENDERED_TICKS
+            ),
+        [minValue, maxValue]
+    );
     const ticks = useMemo(() => {
-        const result: { val: number; isMajor: boolean }[] = [];
-        for (let val = minValue; val <= maxValue; val += TICK_STEP) {
-            result.push({
-                val,
-                isMajor: val % MAJOR_TICK_EVERY === 0,
-            });
-        }
-        return result;
-    }, [minValue, maxValue]);
+        return tickValues.map((val) => ({
+            val,
+            isMajor: val % MAJOR_TICK_EVERY === 0,
+        }));
+    }, [tickValues]);
 
     // value → translation: x = -value * spacing
     const minTranslation = -maxValue * TICK_SPACING;
@@ -221,10 +245,33 @@ export function DialRuler({
     const translationX = useSharedValue(initialTranslation);
     const startX = useSharedValue(initialTranslation);
     const isDragging = useSharedValue(0);
+    const isGestureActive = useSharedValue(0);
+    const gestureRevision = useSharedValue(0);
+    const isProgrammaticMove = useSharedValue(0);
+
+    const interactionStartRef = useRef(onInteractionStart);
+    const interactionEndRef = useRef(onInteractionEnd);
+    interactionStartRef.current = onInteractionStart;
+    interactionEndRef.current = onInteractionEnd;
+
+    const notifyInteractionStart = useCallback(() => {
+        interactionStartRef.current?.();
+    }, []);
+    const notifyInteractionEnd = useCallback(() => {
+        interactionEndRef.current?.();
+    }, []);
 
     const gesture = Gesture.Pan()
+        .enabled(enabled)
         .onBegin(() => {
+            cancelAnimation(translationX);
+            isProgrammaticMove.value = 0;
+            isGestureActive.value = 1;
+            gestureRevision.value = interactionRevision
+                ? interactionRevision.value
+                : 0;
             startX.value = translationX.value;
+            runOnJS(notifyInteractionStart)();
         })
         .onUpdate((e) => {
             const newX = startX.value + e.translationX;
@@ -258,12 +305,23 @@ export function DialRuler({
                     }
                 }
             );
+        })
+        .onFinalize(() => {
+            isGestureActive.value = 0;
+            runOnJS(notifyInteractionEnd)();
         });
 
     // translationX → value (pan + decay)
     useAnimatedReaction(
         () => Math.round(-translationX.value / TICK_SPACING),
         (current, previous) => {
+            if (isProgrammaticMove.value !== 0) return;
+            if (
+                interactionRevision &&
+                gestureRevision.value !== interactionRevision.value
+            ) {
+                return;
+            }
             if (current !== previous && current !== Math.round(value.value)) {
                 value.value = current;
             }
@@ -272,21 +330,37 @@ export function DialRuler({
 
     // value → translationX (a11y / external writes). Skip while dragging.
     useAnimatedReaction(
-        () => Math.round(value.value),
+        () => ({
+            value: Math.round(value.value),
+            gestureActive: isGestureActive.value,
+            revision: interactionRevision ? interactionRevision.value : 0,
+        }),
         (current, previous) => {
             if (previous === null) return;
-            if (current === previous) return;
-            if (isDragging.value !== 0) return;
+            if (current.gestureActive !== 0) return;
+
+            const revisionChanged = current.revision !== previous.revision;
+            if (revisionChanged) cancelAnimation(translationX);
 
             const fromX = Math.round(-translationX.value / TICK_SPACING);
-            if (fromX === current) return;
+            if (fromX === current.value) {
+                if (revisionChanged) isProgrammaticMove.value = 0;
+                return;
+            }
 
             const target = Math.max(
                 minTranslation,
-                Math.min(maxTranslation, -current * TICK_SPACING)
+                Math.min(maxTranslation, -current.value * TICK_SPACING)
             );
             cancelAnimation(translationX);
-            translationX.value = withTiming(target, { duration: 120 });
+            isProgrammaticMove.value = 1;
+            translationX.value = withTiming(
+                target,
+                { duration: 120 },
+                () => {
+                    isProgrammaticMove.value = 0;
+                }
+            );
         }
     );
 
@@ -310,6 +384,7 @@ export function DialRuler({
                                 dragStartX={startX}
                                 isDragging={isDragging}
                                 screenCenter={screenCenter}
+                                tickValues={tickValues}
                             />
                         ))}
                     </View>
@@ -321,14 +396,12 @@ export function DialRuler({
                 start={{ x: 0, y: 0.5 }}
                 end={{ x: 1, y: 0.5 }}
                 style={styles.leftMask}
-                pointerEvents="none"
             />
             <LinearGradient
                 colors={['transparent', fadeColor]}
                 start={{ x: 0, y: 0.5 }}
                 end={{ x: 1, y: 0.5 }}
                 style={styles.rightMask}
-                pointerEvents="none"
             />
         </View>
     );
@@ -378,6 +451,7 @@ const styles = StyleSheet.create({
         top: 0,
         bottom: 0,
         width: MASK_WIDTH,
+        pointerEvents: 'none',
     },
     rightMask: {
         position: 'absolute',
@@ -385,5 +459,6 @@ const styles = StyleSheet.create({
         top: 0,
         bottom: 0,
         width: MASK_WIDTH,
+        pointerEvents: 'none',
     },
 });

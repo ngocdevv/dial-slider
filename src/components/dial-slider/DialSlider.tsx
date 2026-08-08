@@ -12,6 +12,7 @@ import {
 } from 'react-native-reanimated';
 
 import { COLORS, DIAL_CONFIG } from './constants';
+import { normalizeDialRange } from './dial-math';
 import { DialRuler } from './DialRuler';
 import { ValueDisplay } from './ValueDisplay';
 
@@ -46,9 +47,14 @@ export function DialSlider({
     fadeColor = COLORS.BACKGROUND,
     accessibilityLabel = 'Dial slider',
 }: DialSliderProps) {
-    const lo = Math.min(minValue, maxValue);
-    const hi = Math.max(minValue, maxValue);
-    const clampedInitial = clamp(initialValue, lo, hi);
+    const { min: lo, max: hi } = normalizeDialRange(
+        minValue,
+        maxValue,
+        DIAL_CONFIG.MIN_VALUE,
+        DIAL_CONFIG.MAX_VALUE
+    );
+    const safeInitialValue = Number.isFinite(initialValue) ? initialValue : 0;
+    const clampedInitial = clamp(safeInitialValue, lo, hi);
 
     const value = useSharedValue(clampedInitial);
     const [a11yNow, setA11yNow] = useState(clampedInitial);
@@ -104,6 +110,10 @@ export function DialSlider({
                 accessibilityRole="adjustable"
                 accessibilityLabel={accessibilityLabel}
                 accessibilityValue={{ min: lo, max: hi, now: a11yNow }}
+                aria-valuemin={lo}
+                aria-valuemax={hi}
+                aria-valuenow={a11yNow}
+                aria-valuetext={`${a11yNow}`}
                 accessibilityActions={[
                     { name: 'increment', label: 'Increment' },
                     { name: 'decrement', label: 'Decrement' },

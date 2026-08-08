@@ -38,6 +38,9 @@ yarn-error.*
 
 app-example
 
+# Hermes local artifacts
+.hermes/
+
 # generated native folders
 /ios
 /android
