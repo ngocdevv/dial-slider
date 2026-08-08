@@ -2,6 +2,12 @@
 
 Minimal Expo app demoing a single component: `DialSlider`.
 
+## Demo
+
+[![DialSlider demo](./demo.gif)]
+
+Click the preview to open the original video.
+
 ## `DialSlider`
 
 Photo-style adjustment control. The caller owns the tool list (e.g.
