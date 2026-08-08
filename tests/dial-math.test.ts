@@ -2,7 +2,7 @@ import {
     buildDialTickValues,
     getNearestDialTick,
     normalizeDialRange,
-} from '../src/components/dial-slider/dial-math';
+} from '../src/utils/dial-slider/dial-math';
 
 function assert(condition: boolean, message: string) {
     if (!condition) throw new Error(message);

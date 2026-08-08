@@ -40,12 +40,18 @@ const PHOTO_PRESETS: readonly DialPreset[] = [
 src/app/                 # single demo screen
 src/components/dial-slider/
   DialSlider.tsx
-  DialRuler.tsx
+  preset/                # preset viewport, button, progress ring
+  ruler/                 # ruler shell, ticks, origin, edge fades
   constants.ts
-  dial-math.ts
-  ring-math.ts
-  preset-state.ts
+  types.ts
   index.ts
+src/hooks/
+  useDialRulerMotion.ts   # gesture + shared-value synchronization
+src/utils/dial-slider/
+  dial-math.ts
+  preset-config.ts
+  preset-state.ts
+  ring-math.ts
 tests/
 ```
 

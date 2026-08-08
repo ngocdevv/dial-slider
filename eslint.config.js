@@ -10,7 +10,10 @@ module.exports = defineConfig([
   {
     // Reanimated SharedValues + gesture worklets intentionally mutate .value and
     // bridge via refs. React Compiler purity rules are false positives here.
-    files: ['src/components/dial-slider/**/*.{ts,tsx}'],
+    files: [
+      'src/components/dial-slider/**/*.{ts,tsx}',
+      'src/hooks/useDialRulerMotion.ts',
+    ],
     rules: {
       'react-hooks/refs': 'off',
       'react-hooks/immutability': 'off',

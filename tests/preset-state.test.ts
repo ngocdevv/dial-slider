@@ -3,7 +3,7 @@ import {
     isCurrentPresetRevision,
     reconcilePresetValues,
     updatePresetValueForRevision,
-} from '../src/components/dial-slider/preset-state';
+} from '../src/utils/dial-slider/preset-state';
 
 function assert(condition: boolean, message: string) {
     if (!condition) throw new Error(message);

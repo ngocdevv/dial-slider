@@ -2,7 +2,7 @@ import {
     createCircularArcPath,
     getBipolarProgress,
     getSignedProgressColor,
-} from '../src/components/dial-slider/ring-math';
+} from '../src/utils/dial-slider/ring-math';
 
 function assert(condition: boolean, message: string) {
     if (!condition) throw new Error(message);
