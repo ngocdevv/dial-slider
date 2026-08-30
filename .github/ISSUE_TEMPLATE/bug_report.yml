@@ -1,0 +1,101 @@
+name: Bug report
+description: Report reproducible incorrect behavior in Dial Slider
+title: '[Bug]: '
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Remove secrets and private data from every field.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe the expected and actual behavior.
+      placeholder: I expected… Instead…
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Link a small repository or provide exact code and steps.
+      placeholder: |
+        1. Render DialSlider with…
+        2. Drag or select…
+        3. Observe…
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      multiple: true
+      options:
+        - iOS
+        - Android
+        - Web
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: react-native-version
+    attributes:
+      label: React Native version
+      placeholder: 0.86.2
+    validations:
+      required: true
+
+  - type: input
+    id: expo-version
+    attributes:
+      label: Expo SDK/version
+      description: Enter "bare" if this is not an Expo project.
+      placeholder: SDK 57 / expo 57.0.11
+    validations:
+      required: true
+
+  - type: textarea
+    id: dependency-versions
+    attributes:
+      label: Related dependency versions
+      description: Include Dial Slider, Reanimated, Worklets, Gesture Handler, SVG, and Linear Gradient.
+      render: text
+      placeholder: |
+        @ngocdevv/dial-slider: 0.1.0
+        react-native-reanimated: 4.5.1
+        react-native-worklets: 0.10.1
+        react-native-gesture-handler: 2.32.0
+        react-native-svg: 15.15.4
+        expo-linear-gradient: 57.0.1
+    validations:
+      required: true
+
+  - type: textarea
+    id: device
+    attributes:
+      label: Device and build details
+      description: Include device/emulator, OS version, architecture, and dev or release build.
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs, screenshots, or recording
+      description: Paste relevant logs or attach media. Remove secrets and personal data.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Submission checklist
+      options:
+        - label: I searched existing issues and did not find this report.
+          required: true
+        - label: I can reproduce this with a minimal example.
+          required: true
+        - label: I did not include a security exploit or sensitive data.
+          required: true
