@@ -5,14 +5,28 @@ const expoConfig = require('eslint-config-expo/flat');
 module.exports = defineConfig([
   expoConfig,
   {
-    ignores: ['dist/*'],
+    ignores: ['**/.expo/**', '**/lib/**', 'coverage/**'],
   },
   {
-    // Reanimated SharedValues + gesture worklets intentionally mutate .value and
-    // bridge via refs. React Compiler purity rules are false positives here.
+    settings: {
+      'import/core-modules': ['bun:test'],
+      'import/resolver': {
+        typescript: {
+          noWarnOnMultipleProjects: true,
+          project: [
+            'apps/example/tsconfig.json',
+            'packages/dial-slider/tsconfig.json',
+          ],
+        },
+      },
+    },
+  },
+  {
+    // Reanimated SharedValues bridge through refs by design. React Compiler
+    // purity rules report false positives for these worklet-facing modules.
     files: [
-      'src/components/dial-slider/**/*.{ts,tsx}',
-      'src/hooks/useDialRulerMotion.ts',
+      'packages/dial-slider/src/components/dial-slider/**/*.{ts,tsx}',
+      'packages/dial-slider/src/hooks/useDialRulerMotion.ts',
     ],
     rules: {
       'react-hooks/refs': 'off',

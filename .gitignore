@@ -6,6 +6,7 @@ node_modules/
 # Expo
 .expo/
 dist/
+lib/
 web-build/
 expo-env.d.ts
 
@@ -31,12 +32,16 @@ yarn-error.*
 *.pem
 
 # local env files
+.env
+.env.*
+!.env.example
 .env*.local
 
 # typescript
 *.tsbuildinfo
 
 app-example
+*.tgz
 
 # Hermes local artifacts
 .hermes/
@@ -44,3 +49,5 @@ app-example
 # generated native folders
 /ios
 /android
+apps/example/ios/
+apps/example/android/

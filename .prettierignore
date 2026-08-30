@@ -1,0 +1,5 @@
+.expo/
+bun.lock
+coverage/
+lib/
+node_modules/
