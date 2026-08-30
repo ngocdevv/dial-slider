@@ -37,7 +37,7 @@ jobs:
           bun-version: 1.2.10
 
       - name: Cache Bun downloads
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.bun/install/cache
           key: ${{ runner.os }}-bun-1.2.10-${{ hashFiles('bun.lock') }}
