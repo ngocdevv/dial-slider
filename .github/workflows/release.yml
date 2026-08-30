@@ -1,0 +1,90 @@
+name: Release package
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Verify only or publish after environment approval
+        required: true
+        default: dry-run
+        type: choice
+        options:
+          - dry-run
+          - publish
+      npm_tag:
+        description: npm distribution tag
+        required: true
+        default: latest
+        type: choice
+        options:
+          - latest
+          - next
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  release:
+    name: Verify and ${{ inputs.mode }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: npm
+
+    steps:
+      - name: Check out selected tag or commit
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js for npm publishing
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.10
+
+      - name: Install dependencies from lockfile
+        run: bun install --frozen-lockfile
+
+      - name: Run release verification
+        run: |
+          bun run lint
+          bun run typecheck
+          bun run test
+          bun run build
+          bun run pack:check
+
+      - name: Require an exact version tag for an external release
+        if: inputs.mode != 'dry-run'
+        run: |
+          VERSION="$(node -p "require('./packages/dial-slider/package.json').version")"
+          EXPECTED_REF="refs/tags/v${VERSION}"
+          if [ "${GITHUB_REF}" != "${EXPECTED_REF}" ]; then
+            echo "Select tag v${VERSION}; current ref is ${GITHUB_REF}."
+            exit 1
+          fi
+
+      - name: Ensure this version is not already on npm
+        if: inputs.mode != 'dry-run'
+        working-directory: packages/dial-slider
+        run: |
+          NAME="$(node -p "require('./package.json').name")"
+          VERSION="$(node -p "require('./package.json').version")"
+          if npm view "${NAME}@${VERSION}" version >/dev/null 2>&1; then
+            echo "${NAME}@${VERSION} already exists on npm."
+            exit 1
+          fi
+
+      - name: Exercise npm publish without changing the registry
+        if: inputs.mode == 'dry-run'
+        working-directory: packages/dial-slider
+        run: npm publish --dry-run --access public --tag "${{ inputs.npm_tag }}"
+
+      - name: Publish package to npm
+        if: inputs.mode == 'publish'
+        working-directory: packages/dial-slider
+        run: npm publish --access public --tag "${{ inputs.npm_tag }}"
