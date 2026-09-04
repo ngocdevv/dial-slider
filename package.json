@@ -20,9 +20,11 @@
     "typecheck:example": "tsc --noEmit -p apps/example/tsconfig.json",
     "test": "bun test",
     "build": "bun run --cwd packages/dial-slider build",
-    "pack:check": "bun run build && npm pack --dry-run ./packages/dial-slider"
+    "package:lint": "publint packages/dial-slider --strict --pack=false && attw --pack packages/dial-slider",
+    "pack:check": "bun run build && npm pack --dry-run ./packages/dial-slider && bun run package:lint"
   },
   "devDependencies": {
+    "@arethetypeswrong/cli": "^0.18.5",
     "@types/bun": "^1.2.10",
     "browserslist": "^4.28.8",
     "caniuse-lite": "^1.0.30001810",
@@ -30,6 +32,7 @@
     "eslint-config-expo": "~57.0.2",
     "eslint-import-resolver-typescript": "^4.4.4",
     "prettier": "^3.6.2",
+    "publint": "^0.3.24",
     "typescript": "~6.0.3"
   }
 }

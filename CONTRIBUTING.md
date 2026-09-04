@@ -53,7 +53,9 @@ bun run pack:check
 
 Use `bun run format` to apply the repository's formatting rules. Builder Bob
 writes generated output to `packages/dial-slider/lib`; it is ignored and must
-not be committed.
+not be committed. The package check also runs Publint in strict mode and Are the
+Types Wrong against the packed artifact, covering its CommonJS, ESM, bundler,
+and TypeScript entry points.
 
 ## Issues
 
