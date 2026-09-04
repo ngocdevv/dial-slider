@@ -3,7 +3,10 @@ interface Point {
   y: number;
 }
 
-/** Bipolar fill: + side vs maxValue, − side vs |minValue|. */
+/**
+ * Progress away from the neutral value. Neutral is zero when it is in range,
+ * otherwise the nearest range boundary.
+ */
 export function getBipolarProgress(
   value: number,
   minValue: number,
@@ -20,12 +23,18 @@ export function getBipolarProgress(
   const min = Math.min(minValue, maxValue);
   const max = Math.max(minValue, maxValue);
   const clampedValue = Math.min(max, Math.max(min, value));
-  if (clampedValue >= 0) {
-    return max <= 0 ? 0 : Math.min(Math.max(clampedValue / max, 0), 1);
+  const neutral = Math.min(max, Math.max(min, 0));
+
+  if (clampedValue >= neutral) {
+    const positiveRange = max - neutral;
+    return positiveRange <= 0
+      ? 0
+      : Math.min(Math.max((clampedValue - neutral) / positiveRange, 0), 1);
   }
-  return min >= 0
+  const negativeRange = neutral - min;
+  return negativeRange <= 0
     ? 0
-    : Math.min(Math.max(Math.abs(clampedValue) / Math.abs(min), 0), 1);
+    : Math.min(Math.max((neutral - clampedValue) / negativeRange, 0), 1);
 }
 
 export function getSignedProgressColor(
