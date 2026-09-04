@@ -3,9 +3,9 @@
 [![CI](https://github.com/ngocdevv/dial-slider/actions/workflows/ci.yml/badge.svg)](https://github.com/ngocdevv/dial-slider/actions/workflows/ci.yml)
 [![npm version](https://img.shields.io/npm/v/%40ngocdevv%2Fdial-slider.svg)](https://www.npmjs.com/package/@ngocdevv/dial-slider)
 
-An animated, photo-style dial slider component for React Native and Expo. It
-combines a gesture-driven ruler with single- or multi-preset adjustment controls,
-independent values, progress rings, and accessible increment/decrement actions.
+Animated, photo-style dial controls for React Native and Expo. The package
+includes a multi-preset adjustment ruler and an iPhone-camera-style zoom wheel,
+with UI-runtime gestures and accessible increment/decrement actions.
 
 ## Demo
 
@@ -13,6 +13,10 @@ independent values, progress rings, and accessible increment/decrement actions.
 
 ## Features
 
+- `CameraZoomDial` provides compact optical-stop buttons plus a logarithmic,
+  circular zoom scale that expands on touch-and-hold.
+- Camera zoom motion follows the wheel tangent, spaces every zoom doubling by
+  20 degrees, snaps to the requested step, and reports a final value.
 - One preset renders a centered adjustment tool; multiple presets render a
   horizontally scrollable strip.
 - Each preset keeps an independent value, range, initial value, icon, label,
@@ -82,6 +86,44 @@ export function App() {
 
 The library package does not depend on Expo Router. `expo-linear-gradient` is
 the only Expo module used by the component itself.
+
+## Camera zoom wheel
+
+Tap a compact stop to jump to it, or tap the selected stop to open the adjustable
+wheel. Touch and hold the control, then drag left or right for continuous zoom.
+In uncontrolled expansion mode, the wheel returns to its compact state 1.2
+seconds after an interaction finishes.
+
+```tsx
+import { useState } from 'react';
+import { CameraZoomDial, type CameraZoomStop } from '@ngocdevv/dial-slider';
+
+const ZOOM_STOPS: readonly CameraZoomStop[] = [
+  { value: 0.5, focalLength: '13MM' },
+  { value: 1, focalLength: '26MM' },
+  { value: 2 },
+];
+
+export function CameraZoomControl() {
+  const [zoom, setZoom] = useState(1);
+
+  return (
+    <CameraZoomDial
+      minZoom={0.5}
+      maxZoom={10}
+      step={0.1}
+      value={zoom}
+      zoomStops={ZOOM_STOPS}
+      onZoomChange={setZoom}
+      accessibilityLabel="Camera zoom"
+    />
+  );
+}
+```
+
+Use `defaultValue` instead of `value` for uncontrolled zoom. Use `expanded` and
+`onExpandedChange` to own the compact/expanded state, or `defaultExpanded` when
+the wheel should initially be open.
 
 ## Single preset
 
@@ -176,6 +218,41 @@ export function PhotoAdjustments() {
 
 ## API reference
 
+### `CameraZoomDialProps`
+
+| Prop                 | Type                          | Default                  | Description                                                                         |
+| -------------------- | ----------------------------- | ------------------------ | ----------------------------------------------------------------------------------- |
+| `minZoom`            | `number`                      | `0.5`                    | Smallest positive zoom factor. Reversed and invalid ranges are normalized.          |
+| `maxZoom`            | `number`                      | `10`                     | Largest zoom factor.                                                                |
+| `step`               | `number`                      | `0.1`                    | Visible, callback, snapping, and accessibility precision.                           |
+| `value`              | `number`                      | `undefined`              | Controlled zoom factor.                                                             |
+| `defaultValue`       | `number`                      | `1` when in range        | Initial uncontrolled zoom factor.                                                   |
+| `zoomStops`          | `readonly CameraZoomStop[]`   | In-range `0.5`, `1`, `2` | Optical/quick stops; empty or invalid input falls back to the in-range defaults.    |
+| `expanded`           | `boolean`                     | `undefined`              | Controlled wheel expansion state.                                                   |
+| `defaultExpanded`    | `boolean`                     | `false`                  | Initial uncontrolled expansion state.                                               |
+| `onExpandedChange`   | `(expanded: boolean) => void` | `undefined`              | Reports requested compact/expanded state changes.                                   |
+| `onZoomChange`       | `(zoom: number) => void`      | `undefined`              | Reports each crossed step during a drag or animated stop change.                    |
+| `onInteractionStart` | `() => void`                  | `undefined`              | Called when a wheel drag or quick-stop transition begins.                           |
+| `onInteractionEnd`   | `(zoom: number) => void`      | `undefined`              | Called with the final snapped value.                                                |
+| `formatValue`        | `(zoom: number) => string`    | Numeric value plus `x`   | Formats the current visible and accessible value.                                   |
+| `accentColor`        | `string`                      | `#FFD60A`                | Pointer, active value, focal length, and selected compact label.                    |
+| `surfaceColor`       | `string`                      | 50% black                | Expanded circular surface color.                                                    |
+| `labelColor`         | `string`                      | `#FFFFFF`                | Inactive stop label color.                                                          |
+| `disabled`           | `boolean`                     | `false`                  | Disables drag, quick-stop, and accessibility value changes.                         |
+| `accessibilityLabel` | `string`                      | `Camera zoom`            | Adjustable wheel label.                                                             |
+| `accessibilityHint`  | `string`                      | Interaction instructions | Adjustable wheel hint.                                                              |
+| `style`              | `StyleProp<ViewStyle>`        | `undefined`              | Root style. Width determines the measured wheel geometry; height follows its ratio. |
+| `testID`             | `string`                      | `undefined`              | Root identifier; stop IDs append `-stop-{value}`.                                   |
+
+### `CameraZoomStop`
+
+| Field          | Type     | Default      | Description                                                         |
+| -------------- | -------- | ------------ | ------------------------------------------------------------------- |
+| `value`        | `number` | Required     | Positive factor, normalized to the nearest configured `step`.       |
+| `label`        | `string` | Numeric      | Circular wheel label without an automatically appended `x`.         |
+| `compactLabel` | `string` | Camera style | Inactive compact label; fractions omit the leading zero by default. |
+| `focalLength`  | `string` | None         | Optional equivalent focal length, such as `13MM` or `26MM`.         |
+
 ### `DialSliderProps`
 
 | Prop                 | Type                                                                  | Default                 | Description                                                                                 |
@@ -211,6 +288,12 @@ export function PhotoAdjustments() {
 
 ### Callback semantics
 
+- `CameraZoomDial` reports discrete `step` values while its scale moves. In
+  controlled mode, `value` remains the source of truth; in uncontrolled mode,
+  the component applies each proposal internally.
+- Controlled `expanded` state is changed only by its owner. In uncontrolled
+  mode, the component expands for a wheel gesture and automatically collapses
+  after the interaction.
 - `onPresetChange(presetId, value)` reports a user selection request and the
   current value owned by that preset. Uncontrolled mode also reports an
   automatic fallback when the active preset is removed or disabled.
@@ -234,12 +317,12 @@ of release performance.
 
 ## Accessibility
 
-The active ruler exposes `adjustable`, its normalized range and current value,
-disabled state, and increment/decrement actions. Preset buttons expose selected
-and disabled state plus their values. Supply concise preset labels, use
-`formatValue` for units, and provide an explicit `accessibilityLabel` when the
-surrounding context is not obvious. Reanimated transitions honor the system
-reduced-motion preference.
+The expanded camera wheel and active adjustment ruler expose `adjustable`, their
+normalized range and current value, disabled state, and increment/decrement
+actions. Compact zoom stops and preset controls expose button selection and
+disabled state. Supply concise labels, use `formatValue` for units, and provide
+an explicit `accessibilityLabel` when the surrounding context is not obvious.
+Reanimated transitions honor the system reduced-motion preference.
 
 ## Development
 

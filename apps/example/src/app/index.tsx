@@ -1,7 +1,12 @@
-import React, { useCallback, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React from 'react';
+import { ScrollView, StyleSheet, Text } from 'react-native';
 
-import { DialSlider, type DialPreset } from '@ngocdevv/dial-slider';
+import {
+  CameraZoomDial,
+  DialSlider,
+  type CameraZoomStop,
+  type DialPreset,
+} from '@ngocdevv/dial-slider';
 
 function PresetGlyph({
   children,
@@ -17,11 +22,12 @@ function PresetGlyph({
   );
 }
 
-/**
- * Demo tool list. Length decides chrome:
- * - 1 item  → single centered tool + ruler
- * - N items → horizontal preset strip + shared ruler
- */
+const CAMERA_ZOOM_STOPS: readonly CameraZoomStop[] = [
+  { value: 0.5, focalLength: '13MM' },
+  { value: 1, focalLength: '26MM' },
+  { value: 2 },
+];
+
 const PHOTO_PRESETS: readonly DialPreset[] = [
   {
     id: 'exposure',
@@ -82,42 +88,30 @@ const PHOTO_PRESETS: readonly DialPreset[] = [
 ];
 
 export default function HomeScreen() {
-  const [activePreset, setActivePreset] = useState('highlights');
-  const [activeValue, setActiveValue] = useState(0);
-
-  const handlePresetChange = useCallback((presetId: string, value: number) => {
-    setActivePreset(presetId);
-    setActiveValue(value);
-  }, []);
-
-  const handleValueChange = useCallback((presetId: string, value: number) => {
-    setActivePreset(presetId);
-    setActiveValue(value);
-  }, []);
-
-  const activeLabel =
-    PHOTO_PRESETS.find((preset) => preset.id === activePreset)?.label ??
-    activePreset;
-
   return (
-    <View style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.title}>Photo adjustments</Text>
-        <Text style={styles.caption}>
-          {activeLabel} · {activeValue}
-        </Text>
+    <ScrollView
+      contentInsetAdjustmentBehavior="automatic"
+      showsVerticalScrollIndicator={false}
+      style={styles.container}
+      contentContainerStyle={styles.content}
+    >
+      <CameraZoomDial
+        minZoom={0.5}
+        maxZoom={10}
+        defaultValue={1}
+        defaultExpanded
+        zoomStops={CAMERA_ZOOM_STOPS}
+        accessibilityLabel="Camera zoom"
+        testID="camera-zoom-dial"
+      />
 
-        <View style={styles.dialSurface}>
-          <DialSlider
-            presets={PHOTO_PRESETS}
-            initialPresetId="highlights"
-            onPresetChange={handlePresetChange}
-            onValueChange={handleValueChange}
-            backgroundColor="#000000"
-          />
-        </View>
-      </View>
-    </View>
+      <DialSlider
+        presets={PHOTO_PRESETS}
+        initialPresetId="highlights"
+        backgroundColor="#000000"
+        testID="dial-slider"
+      />
+    </ScrollView>
   );
 }
 
@@ -127,24 +121,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#000000',
   },
   content: {
-    flex: 1,
+    flexGrow: 1,
+    gap: 16,
     justifyContent: 'center',
-  },
-  title: {
-    color: '#FFFFFF',
-    fontSize: 22,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  caption: {
-    color: '#8E8E93',
-    fontSize: 14,
-    marginTop: 6,
-    marginBottom: 24,
-    textAlign: 'center',
-  },
-  dialSurface: {
-    width: '100%',
+    paddingVertical: 24,
   },
   glyph: {
     color: '#E4E4E7',

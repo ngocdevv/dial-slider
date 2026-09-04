@@ -26,7 +26,9 @@ module.exports = defineConfig([
     // purity rules report false positives for these worklet-facing modules.
     files: [
       'packages/dial-slider/src/components/dial-slider/**/*.{ts,tsx}',
+      'packages/dial-slider/src/components/camera-zoom-dial/CameraZoomDial.tsx',
       'packages/dial-slider/src/hooks/useDialRulerMotion.ts',
+      'packages/dial-slider/src/hooks/useCameraZoomMotion.ts',
     ],
     rules: {
       'react-hooks/refs': 'off',

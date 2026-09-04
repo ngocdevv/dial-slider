@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Added `CameraZoomDial`, an accessible compact/expanded camera zoom control with
+  configurable optical stops, focal-length labels, logarithmic wheel geometry,
+  touch-and-hold expansion, snapping, controlled or uncontrolled state, and a
+  measured pointer cutout that masks rotating ticks like the iPhone Camera UI.
+- Added a camera-style example, zoom geometry regression tests, public type
+  coverage, and API documentation.
+
 ## [0.1.0] - 2026-08-30
 
 ### Added
