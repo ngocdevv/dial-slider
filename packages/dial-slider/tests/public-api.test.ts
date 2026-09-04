@@ -6,6 +6,9 @@ const packageRoot = join(import.meta.dir, '..');
 describe('public package surface', () => {
   test('exports the component and supported public types only', async () => {
     const source = await Bun.file(join(packageRoot, 'src/index.ts')).text();
+    expect(source).toContain('export { CameraZoomDial }');
+    expect(source).toContain('CameraZoomDialProps');
+    expect(source).toContain('CameraZoomStop');
     expect(source).toContain('export { DialSlider }');
     expect(source).toContain('DialPreset');
     expect(source).toContain('DialSliderProps');

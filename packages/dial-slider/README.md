@@ -1,8 +1,8 @@
 # @ngocdevv/dial-slider
 
-Animated, photo-style dial slider for React Native and Expo with single- and
-multi-preset modes, independent values, accessible actions, and UI-runtime
-gesture motion.
+Animated, photo-style dial controls for React Native and Expo: a single- or
+multi-preset adjustment ruler plus an iPhone-camera-style logarithmic zoom wheel.
+Both provide accessible actions and UI-runtime gesture motion.
 
 ```bash
 bun add @ngocdevv/dial-slider
@@ -12,7 +12,10 @@ npx expo install expo-linear-gradient react-native-gesture-handler \
 
 ```tsx
 import {
+  CameraZoomDial,
   DialSlider,
+  type CameraZoomDialProps,
+  type CameraZoomStop,
   type DialPreset,
   type DialSliderProps,
 } from '@ngocdevv/dial-slider';

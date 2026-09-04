@@ -1,7 +1,7 @@
 {
   "name": "@ngocdevv/dial-slider",
   "version": "0.1.0",
-  "description": "Animated photo-style dial slider component for React Native and Expo.",
+  "description": "Animated dial slider and camera zoom wheel components for React Native and Expo.",
   "type": "commonjs",
   "source": "./src/index.ts",
   "main": "./lib/commonjs/index.js",
@@ -41,6 +41,9 @@
     "expo",
     "slider",
     "dial",
+    "camera",
+    "zoom",
+    "wheel",
     "reanimated",
     "gesture-handler",
     "photo-editor",
