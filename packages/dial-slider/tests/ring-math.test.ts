@@ -13,6 +13,16 @@ describe('preset progress ring', () => {
     expect(getBipolarProgress(0, -100, 100)).toBe(0);
   });
 
+  test('starts one-sided ranges at their nearest-to-zero boundary', () => {
+    expect(getBipolarProgress(10, 10, 20)).toBe(0);
+    expect(getBipolarProgress(15, 10, 20)).toBe(0.5);
+    expect(getBipolarProgress(20, 10, 20)).toBe(1);
+
+    expect(getBipolarProgress(-10, -20, -10)).toBe(0);
+    expect(getBipolarProgress(-15, -20, -10)).toBe(0.5);
+    expect(getBipolarProgress(-20, -20, -10)).toBe(1);
+  });
+
   test('clamps progress and safely rejects non-finite configuration', () => {
     expect(getBipolarProgress(500, -100, 100)).toBe(1);
     expect(getBipolarProgress(-500, -100, 100)).toBe(1);
