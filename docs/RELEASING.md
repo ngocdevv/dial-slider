@@ -65,6 +65,10 @@ Also test the example in release builds on physical iOS and Android devices.
 Flick the ruler, interrupt it during decay, reverse direction, switch presets
 during motion, and verify both hard edges and final integer snapping.
 
+`bun run pack:check` builds and inspects the tarball, then runs Publint in strict
+mode and Are the Types Wrong against the packed CommonJS, ESM, bundler, and
+TypeScript entry points.
+
 ### Current release evidence (2026-08-30)
 
 This snapshot records development validation for `0.1.0`; it does not replace
