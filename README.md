@@ -86,7 +86,6 @@ the only Expo module used by the component itself.
 ## Single preset
 
 ```tsx
-import { useState } from 'react';
 import { Text } from 'react-native';
 import { DialSlider, type DialPreset } from '@ngocdevv/dial-slider';
 
@@ -100,22 +99,24 @@ const EXPOSURE: readonly DialPreset[] = [
     minValue: -100,
     maxValue: 100,
     initialValue: 0,
+    formatValue: (value) => `${value}%`,
   },
 ];
 
 export function ExposureControl() {
-  const [value, setValue] = useState(0);
-
   return (
     <DialSlider
       presets={EXPOSURE}
       defaultValues={{ exposure: 0 }}
-      onValueChange={(_presetId, nextValue) => setValue(nextValue)}
-      accessibilityLabel={`Exposure, ${value}`}
+      accessibilityLabel="Exposure"
     />
   );
 }
 ```
+
+Keep `accessibilityLabel` stable. The active value is exposed separately through
+the adjustable control's accessibility value and uses the preset's
+`formatValue` output.
 
 ## Multiple presets
 

@@ -17,7 +17,8 @@ interface PresetButtonProps {
   selected: boolean;
   accentColor: string;
   adjustedColor: string;
-  onPress: () => void;
+  /** Omit for a visual-only indicator that should not receive accessibility focus. */
+  onPress?: () => void;
 }
 
 export function PresetButton({
@@ -40,6 +41,34 @@ export function PresetButton({
     positiveProgressColor,
     COLORS.NEGATIVE
   );
+  const content = (
+    <>
+      <PresetRing
+        value={value}
+        minValue={min}
+        maxValue={max}
+        color={progressColor}
+        backgroundColor={selected ? '#5C5C60' : '#4A4A4D'}
+      />
+      <View style={[styles.iconSlot, !selected && styles.inactiveIcon]}>
+        {icon}
+      </View>
+    </>
+  );
+
+  if (!onPress) {
+    return (
+      <View
+        accessible={false}
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+        pointerEvents="none"
+        style={[styles.presetButton, preset.disabled && styles.disabledPreset]}
+      >
+        {content}
+      </View>
+    );
+  }
 
   return (
     <Pressable
@@ -60,16 +89,7 @@ export function PresetButton({
         pressed && styles.pressedPreset,
       ]}
     >
-      <PresetRing
-        value={value}
-        minValue={min}
-        maxValue={max}
-        color={progressColor}
-        backgroundColor={selected ? '#5C5C60' : '#4A4A4D'}
-      />
-      <View style={[styles.iconSlot, !selected && styles.inactiveIcon]}>
-        {icon}
-      </View>
+      {content}
     </Pressable>
   );
 }

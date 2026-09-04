@@ -22,7 +22,6 @@ import { PresetButton } from './PresetButton';
 import { PresetRing } from './PresetRing';
 
 const { ITEM_SIZE, ITEM_GAP } = DIAL_CONFIG;
-const NOOP = () => {};
 
 interface DialPresetViewportProps {
   presets: readonly DialPreset[];
@@ -113,7 +112,6 @@ export function DialPresetViewport({
             selected
             accentColor={accentColor}
             adjustedColor={adjustedColor}
-            onPress={NOOP}
           />
         </View>
       )}
